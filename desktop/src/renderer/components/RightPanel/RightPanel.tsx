@@ -12,10 +12,9 @@ import { useAppStore } from '../../store/app-store'
 import { subscribeGitStatusChanged } from '../../utils/git-status-events'
 import { FileTree } from './FileTree'
 import { ChangedFiles } from './ChangedFiles'
-import { WorkspaceMemoryPanel } from './WorkspaceMemoryPanel'
 import styles from './RightPanel.module.css'
 
-type PanelMode = 'files' | 'changes' | 'memory'
+type PanelMode = 'files' | 'changes'
 
 export function RightPanel() {
   const {
@@ -47,6 +46,11 @@ export function RightPanel() {
   }, [worktreePath])
 
   useEffect(() => {
+    if (rightPanelMode === 'memory') {
+      setRightPanelMode('files')
+      return
+    }
+
     if (!worktreePath) {
       setChangeCount(0)
       return
@@ -66,7 +70,7 @@ export function RightPanel() {
       unsubStatus()
       window.api.fs.unwatchDir(worktreePath)
     }
-  }, [worktreePath, refreshChangeCount])
+  }, [worktreePath, rightPanelMode, refreshChangeCount, setRightPanelMode])
 
   useEffect(() => {
     if (rightPanelMode === 'changes') {
@@ -111,12 +115,6 @@ export function RightPanel() {
               />
             )}
           </Tab>
-          <Tab
-            value="memory"
-            title={`Memory (${formatShortcut(SHORTCUT_MAP.memoryPanel.mac, SHORTCUT_MAP.memoryPanel.win)})`}
-          >
-            Memory
-          </Tab>
         </TabList>
       </div>
 
@@ -139,9 +137,6 @@ export function RightPanel() {
                 workspaceId={workspace.id}
                 isActive={rightPanelMode === 'changes'}
               />
-            </div>
-            <div style={{ display: rightPanelMode === 'memory' ? 'contents' : 'none' }}>
-              <WorkspaceMemoryPanel workspace={workspace} />
             </div>
           </>
         )}

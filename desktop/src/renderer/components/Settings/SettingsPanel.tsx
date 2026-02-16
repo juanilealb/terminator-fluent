@@ -42,7 +42,6 @@ const SHORTCUTS: Array<{ action: string; binding: ShortcutBinding }> = [
   { action: 'Toggle right panel', binding: SHORTCUT_MAP.toggleRightPanel },
   { action: 'Files panel', binding: SHORTCUT_MAP.filesPanel },
   { action: 'Changes panel', binding: SHORTCUT_MAP.changesPanel },
-  { action: 'Memory panel', binding: SHORTCUT_MAP.memoryPanel },
   { action: 'Focus terminal', binding: SHORTCUT_MAP.focusTerminal },
   { action: 'Increase font size', binding: SHORTCUT_MAP.increaseFontSize },
   { action: 'Decrease font size', binding: SHORTCUT_MAP.decreaseFontSize },

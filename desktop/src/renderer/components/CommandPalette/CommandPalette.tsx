@@ -57,7 +57,7 @@ export function CommandPalette() {
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
 
-  const ensureRightPanelMode = (mode: 'files' | 'changes' | 'memory') => {
+  const ensureRightPanelMode = (mode: 'files' | 'changes') => {
     setRightPanelMode(mode)
     if (!rightPanelOpen) toggleRightPanel()
   }
@@ -213,15 +213,6 @@ export function CommandPalette() {
         shortcut: '/changes',
         run: () => ensureRightPanelMode('changes'),
       },
-      {
-        id: 'panel-memory',
-        title: 'Show memory panel',
-        description: 'Open workspace memory and snapshots',
-        keywords: ['memory', '/memory', 'notes'],
-        category: 'Panels',
-        shortcut: '/memory',
-        run: () => ensureRightPanelMode('memory'),
-      },
     ]
 
     if (workspace) {
@@ -336,10 +327,6 @@ export function CommandPalette() {
       ensureRightPanelMode('changes')
       return true
     }
-    if (command === 'memory') {
-      ensureRightPanelMode('memory')
-      return true
-    }
     if (command === 'snapshot') {
       if (!workspace) {
         addToast({ id: crypto.randomUUID(), message: 'Select a workspace first', type: 'info' })
@@ -384,7 +371,7 @@ export function CommandPalette() {
     if (command === 'help') {
         addToast({
           id: crypto.randomUUID(),
-          message: 'Slash commands: /terminal /terminal-find /terminal-clear /files /changes /memory /snapshot /restore-latest /template',
+          message: 'Slash commands: /terminal /terminal-find /terminal-clear /files /changes /snapshot /restore-latest /template',
           type: 'info',
         })
       return true

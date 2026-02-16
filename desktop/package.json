@@ -1,6 +1,6 @@
 {
     "name": "terminator",
-    "productName": "Terminator",
+    "productName": "Terminator Fluent",
     "version": "1.0.1",
     "description": "Windows app for running multiple AI terminals in parallel",
     "main": "./out/main/index.js",
