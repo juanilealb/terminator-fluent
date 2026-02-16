@@ -2,8 +2,10 @@ import { create } from 'zustand'
 import type { AppState, PersistedState, Tab } from './types'
 import {
   DEFAULT_AGENT_PERMISSION_MODE,
+  DEFAULT_PROJECT_OWNERSHIP,
   DEFAULT_SETTINGS,
   DEFAULT_WORKSPACE_TYPE,
+  parseProjectOwnership,
   parseAgentPermissionMode,
   isWorkspaceType,
 } from './types'
@@ -115,6 +117,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...s.projects,
         {
           ...project,
+          ownership: parseProjectOwnership(project.ownership ?? s.settings.defaultProjectOwnership),
           prLinkProvider: project.prLinkProvider ?? DEFAULT_PR_LINK_PROVIDER,
         },
       ],
@@ -301,6 +304,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             id: crypto.randomUUID(),
             name: baseName,
             repoPath: dirPath,
+            ownership: s.settings.defaultProjectOwnership ?? DEFAULT_PROJECT_OWNERSHIP,
           }
           get().addProject(project)
         }
@@ -362,10 +366,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const baseName = basenameFromPath(validDirPath) || validDirPath
     let project = get().projects.find((p) => p.repoPath === validDirPath)
     if (!project) {
+      const nextSettings = get().settings
       project = {
         id: crypto.randomUUID(),
         name: baseName,
         repoPath: validDirPath,
+        ownership: nextSettings.defaultProjectOwnership ?? DEFAULT_PROJECT_OWNERSHIP,
       }
       get().addProject(project)
     }
@@ -705,6 +711,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   hydrateState: (data) => {
     const projects = (data.projects ?? []).map((project) => ({
       ...project,
+      ownership: parseProjectOwnership(project.ownership),
       prLinkProvider: project.prLinkProvider ?? DEFAULT_PR_LINK_PROVIDER,
     }))
     const workspaces = (data.workspaces ?? []).map((workspace) => ({

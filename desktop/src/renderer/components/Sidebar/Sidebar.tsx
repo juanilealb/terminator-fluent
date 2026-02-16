@@ -4,13 +4,15 @@ import { basenameSafe, formatShortcut, toPosixPath } from "@shared/platform";
 import { SHORTCUT_MAP } from "@shared/shortcuts";
 import { DEFAULT_AGENT_PERMISSION_MODE, type AgentPermissionMode } from "@shared/agent-permissions";
 import { useAppStore } from "../../store/app-store";
-import { DEFAULT_WORKSPACE_TYPE, type Project, type PrLinkProvider, type WorkspaceType } from "../../store/types";
+import { DEFAULT_WORKSPACE_TYPE, type Project, type PrLinkProvider, type ProjectOwnership, type WorkspaceType } from "../../store/types";
 import type { CreateWorktreeProgressEvent } from "../../../shared/workspace-creation";
 import type { OpenPrInfo, GithubLookupError } from "../../../shared/github-types";
 import { WorkspaceDialog } from "./WorkspaceDialog";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { AddProjectDialog } from "./AddProjectDialog";
 import { Tooltip } from "../Tooltip/Tooltip";
+import { getPreferredGithubLogin } from "../../utils/github-profile";
 import styles from "./Sidebar.module.css";
 
 const PR_ICON_SIZE = 10;
@@ -132,6 +134,11 @@ function GhStatusHint({ projectId }: { projectId: string }) {
 interface WorkspaceCreationState {
   requestId: string;
   message: string;
+}
+
+interface AddProjectDraft {
+  repoPath: string;
+  name: string;
 }
 
 function PrStateIcon({ state }: { state: "open" | "merged" | "closed" }) {
@@ -340,6 +347,9 @@ export function Sidebar() {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const setPrStatuses = useAppStore((s) => s.setPrStatuses);
   const setGhAvailability = useAppStore((s) => s.setGhAvailability);
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
+  const settings = useAppStore((s) => s.settings);
+  const defaultProjectOwnership = useAppStore((s) => s.settings.defaultProjectOwnership);
 
   const [manualCollapsed, setManualCollapsed] = useState<Set<string>>(
     new Set(),
@@ -363,6 +373,7 @@ export function Sidebar() {
   const [projectPrError, setProjectPrError] = useState<
     Record<string, string | null>
   >({});
+  const [addProjectDraft, setAddProjectDraft] = useState<AddProjectDraft | null>(null);
   const [pullingPrKey, setPullingPrKey] = useState<string | null>(null);
   const [projectPrSearch, setProjectPrSearch] = useState("");
   const editRef = useRef<string>("");
@@ -445,10 +456,33 @@ export function Sidebar() {
     const dirPath = await window.api.app.selectDirectory();
     if (!dirPath) return;
 
+    const existingProject = projects.find((project) => project.repoPath === dirPath);
+    if (existingProject) {
+      addToast({
+        id: crypto.randomUUID(),
+        message: `Project "${existingProject.name}" already exists.`,
+        type: "info",
+      });
+      return;
+    }
+
     const name = basenameSafe(toPosixPath(dirPath)) || dirPath;
-    const id = crypto.randomUUID();
-    addProject({ id, name, repoPath: dirPath });
-  }, [addProject]);
+    setAddProjectDraft({ repoPath: dirPath, name });
+  }, [addToast, projects]);
+
+  const handleConfirmAddProject = useCallback(
+    (name: string, ownership: ProjectOwnership) => {
+      if (!addProjectDraft) return;
+      addProject({
+        id: crypto.randomUUID(),
+        name,
+        repoPath: addProjectDraft.repoPath,
+        ownership,
+      });
+      setAddProjectDraft(null);
+    },
+    [addProject, addProjectDraft],
+  );
 
   const finishCreateWorkspace = useCallback(
     async (
@@ -600,7 +634,8 @@ export function Sidebar() {
       setProjectPrError((prev) => ({ ...prev, [project.id]: null }));
 
       try {
-        const result = await window.api.github.listOpenPrs(project.repoPath);
+        const preferredLogin = getPreferredGithubLogin(project, settings);
+        const result = await window.api.github.listOpenPrs(project.repoPath, preferredLogin);
         setGhAvailability(project.id, result.available, result.error);
         if (!result.available) {
           setProjectOpenPrs((prev) => ({ ...prev, [project.id]: [] }));
@@ -629,7 +664,7 @@ export function Sidebar() {
         setProjectPrLoading((prev) => ({ ...prev, [project.id]: false }));
       }
     },
-    [setGhAvailability, setPrStatuses],
+    [setGhAvailability, setPrStatuses, settings],
   );
 
   const handleToggleProjectPrPopover = useCallback(
@@ -824,7 +859,23 @@ export function Sidebar() {
 
   return (
     <div className={styles.sidebar}>
-      <div className={styles.titleArea} />
+      <div className={styles.titleArea}>
+        <div className={styles.sidebarToggleSlot}>
+          <Tooltip
+            label="Collapse sidebar"
+            shortcut={formatShortcut(SHORTCUT_MAP.toggleSidebar.mac, SHORTCUT_MAP.toggleSidebar.win)}
+          >
+            <button
+              type="button"
+              className={styles.sidebarToggle}
+              onClick={toggleSidebar}
+              aria-label="Collapse sidebar"
+            >
+              <span className={styles.sidebarToggleGlyph}>&#x2039;</span>
+            </button>
+          </Tooltip>
+        </div>
+      </div>
 
       <div className={styles.projectList}>
         {projects.length === 0 && (
@@ -1009,7 +1060,7 @@ export function Sidebar() {
             appearance="subtle"
             className={styles.actionButton}
             onClick={handleAddProject}
-            icon={<span className={styles.actionIcon}>+</span>}
+            icon={<span className={`${styles.actionIcon} ${styles.footerActionIcon}`}>+</span>}
           >
             Add project
           </Button>
@@ -1022,7 +1073,7 @@ export function Sidebar() {
             appearance="subtle"
             className={styles.actionButton}
             onClick={toggleSettings}
-            icon={<span className={styles.actionIcon}>{"\u2699"}</span>}
+            icon={<span className={`${styles.actionIcon} ${styles.footerActionIcon}`}>{"\u2699"}</span>}
           >
             Settings
           </Button>
@@ -1254,10 +1305,11 @@ export function Sidebar() {
       {editingProject && (
         <ProjectSettingsDialog
           project={editingProject}
-          onSave={({ startupCommands, prLinkProvider }) => {
+          onSave={({ startupCommands, prLinkProvider, ownership }) => {
             updateProject(editingProject.id, {
               startupCommands,
               prLinkProvider,
+              ownership,
             });
             setEditingProject(null);
           }}
@@ -1273,6 +1325,17 @@ export function Sidebar() {
           destructive={confirmDialog.destructive}
           onConfirm={confirmDialog.onConfirm}
           onCancel={dismissConfirmDialog}
+        />
+      )}
+
+      {addProjectDraft && (
+        <AddProjectDialog
+          open
+          initialName={addProjectDraft.name}
+          repoPath={addProjectDraft.repoPath}
+          initialOwnership={defaultProjectOwnership}
+          onCancel={() => setAddProjectDraft(null)}
+          onConfirm={handleConfirmAddProject}
         />
       )}
     </div>

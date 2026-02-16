@@ -330,12 +330,16 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}): void {
   })
 
   // ── GitHub handlers ──
-  ipcMain.handle(IPC.GITHUB_GET_PR_STATUSES, async (_e, repoPath: string, branches: string[]) => {
-    return GithubService.getPrStatuses(repoPath, branches)
+  ipcMain.handle(IPC.GITHUB_GET_PR_STATUSES, async (_e, repoPath: string, branches: string[], preferredLogin?: string) => {
+    return GithubService.getPrStatuses(repoPath, branches, preferredLogin)
   })
 
-  ipcMain.handle(IPC.GITHUB_LIST_OPEN_PRS, async (_e, repoPath: string) => {
-    return GithubService.listOpenPrs(repoPath)
+  ipcMain.handle(IPC.GITHUB_LIST_OPEN_PRS, async (_e, repoPath: string, preferredLogin?: string) => {
+    return GithubService.listOpenPrs(repoPath, preferredLogin)
+  })
+
+  ipcMain.handle(IPC.GITHUB_LIST_AUTH_ACCOUNTS, async (_e, host = 'github.com') => {
+    return GithubService.listAuthAccounts(host)
   })
 
   // ── PTY handlers ──
@@ -848,3 +852,4 @@ export function sendActivateWorkspace(workspaceId: string): void {
     }
   }
 }
+

@@ -12,6 +12,14 @@ export interface StartupCommand {
   command: string
 }
 
+export const PROJECT_OWNERSHIPS = ['personal', 'work'] as const
+export type ProjectOwnership = (typeof PROJECT_OWNERSHIPS)[number]
+export const DEFAULT_PROJECT_OWNERSHIP: ProjectOwnership = 'personal'
+
+export function parseProjectOwnership(value: unknown): ProjectOwnership {
+  return value === 'work' ? 'work' : 'personal'
+}
+
 export const WORKSPACE_TYPES = ['bug', 'feature', 'chore', 'refactor', 'docs', 'test', 'spike'] as const
 export type WorkspaceType = (typeof WORKSPACE_TYPES)[number]
 export const DEFAULT_WORKSPACE_TYPE: WorkspaceType = 'feature'
@@ -24,6 +32,7 @@ export interface Project {
   id: string
   name: string
   repoPath: string
+  ownership?: ProjectOwnership
   startupCommands?: StartupCommand[]
   prLinkProvider?: PrLinkProvider
 }
@@ -71,6 +80,9 @@ export interface Settings {
   autoSaveOnBlur: boolean
   defaultShell: string
   defaultShellArgs: string
+  defaultProjectOwnership: ProjectOwnership
+  githubPersonalLogin: string
+  githubWorkLogin: string
   restoreWorkspace: boolean
   diffInline: boolean
   terminalFontSize: number
@@ -85,6 +97,9 @@ export const DEFAULT_SETTINGS: Settings = {
   autoSaveOnBlur: false,
   defaultShell: '',
   defaultShellArgs: '',
+  defaultProjectOwnership: DEFAULT_PROJECT_OWNERSHIP,
+  githubPersonalLogin: '',
+  githubWorkLogin: '',
   restoreWorkspace: true,
   diffInline: false,
   terminalFontSize: 14,

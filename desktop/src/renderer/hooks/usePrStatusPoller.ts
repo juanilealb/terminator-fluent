@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { PrInfo, PrLookupResult } from '../../shared/github-types'
 import { useAppStore } from '../store/app-store'
+import { getPreferredGithubLogin } from '../utils/github-profile'
 
 const FAST_POLL_INTERVAL = 7_000
 const NORMAL_POLL_INTERVAL = 25_000
@@ -69,7 +70,16 @@ export function usePrStatusPoller(): void {
       const fetches = Array.from(projectBranches.entries()).map(
         async ([projectId, { repoPath, branches }]) => {
           try {
-            const result = await window.api.github.getPrStatuses(repoPath, branches) as PrLookupResult
+            const latestState = useAppStore.getState()
+            const project = latestState.projects.find((p) => p.id === projectId)
+            const preferredLogin = project
+              ? getPreferredGithubLogin(project, latestState.settings)
+              : undefined
+            const result = await window.api.github.getPrStatuses(
+              repoPath,
+              branches,
+              preferredLogin,
+            ) as PrLookupResult
             setGhAvailability(projectId, result.available, result.error)
             if (result.available) {
               setPrStatuses(projectId, result.data)

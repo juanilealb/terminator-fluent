@@ -1,5 +1,9 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
+import { basenameSafe, formatShortcut, toPosixPath } from '@shared/platform'
+import { SHORTCUT_MAP } from '@shared/shortcuts'
 import { useAppStore } from '../../store/app-store'
+import type { ProjectOwnership } from '../../store/types'
+import { AddProjectDialog } from './AddProjectDialog'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './SidebarRail.module.css'
 
@@ -14,6 +18,11 @@ interface WorkspaceWithState {
   isUnread: boolean
 }
 
+interface AddProjectDraft {
+  repoPath: string
+  name: string
+}
+
 export function SidebarRail() {
   const projects = useAppStore((s) => s.projects)
   const workspaces = useAppStore((s) => s.workspaces)
@@ -23,6 +32,11 @@ export function SidebarRail() {
   const unreadWorkspaceIds = useAppStore((s) => s.unreadWorkspaceIds)
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
+  const addProject = useAppStore((s) => s.addProject)
+  const addToast = useAppStore((s) => s.addToast)
+  const toggleSettings = useAppStore((s) => s.toggleSettings)
+  const defaultProjectOwnership = useAppStore((s) => s.settings.defaultProjectOwnership)
+  const [addProjectDraft, setAddProjectDraft] = useState<AddProjectDraft | null>(null)
 
   const ordered = useMemo<WorkspaceWithState[]>(() => {
     const projectNameById = new Map(projects.map((project) => [project.id, project.name]))
@@ -54,18 +68,51 @@ export function SidebarRail() {
     unreadWorkspaceIds,
   ])
 
+  const handleAddProject = useCallback(async () => {
+    const dirPath = await window.api.app.selectDirectory()
+    if (!dirPath) return
+    const existingProject = projects.find((project) => project.repoPath === dirPath)
+    if (existingProject) {
+      addToast({
+        id: crypto.randomUUID(),
+        message: `Project "${existingProject.name}" already exists.`,
+        type: 'info',
+      })
+      return
+    }
+    const name = basenameSafe(toPosixPath(dirPath)) || dirPath
+    setAddProjectDraft({ repoPath: dirPath, name })
+  }, [addToast, projects])
+
+  const handleConfirmAddProject = useCallback((name: string, ownership: ProjectOwnership) => {
+    if (!addProjectDraft) return
+    addProject({
+      id: crypto.randomUUID(),
+      name,
+      repoPath: addProjectDraft.repoPath,
+      ownership,
+    })
+    setAddProjectDraft(null)
+  }, [addProject, addProjectDraft])
+
   return (
     <div className={styles.rail}>
       <div className={styles.railHeader}>
-        <Tooltip label="Expand sidebar">
-          <button
-            className={styles.expandButton}
-            onClick={() => toggleSidebar()}
-            aria-label="Expand sidebar"
+        <div className={styles.sidebarToggleSlot}>
+          <Tooltip
+            label="Expand sidebar"
+            shortcut={formatShortcut(SHORTCUT_MAP.toggleSidebar.mac, SHORTCUT_MAP.toggleSidebar.win)}
           >
-            <span className={styles.expandGlyph} />
-          </button>
-        </Tooltip>
+            <button
+              type="button"
+              className={styles.sidebarToggle}
+              onClick={toggleSidebar}
+              aria-label="Expand sidebar"
+            >
+              <span className={styles.sidebarToggleGlyph}>&#x203a;</span>
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       <div className={styles.workspaceList}>
@@ -98,6 +145,49 @@ export function SidebarRail() {
           })
         )}
       </div>
+
+      <div className={styles.actions}>
+        <div className={styles.actionSlot}>
+          <Tooltip label="Add project">
+            <button
+              type="button"
+              className={`${styles.sidebarToggle} ${styles.actionButton}`}
+              aria-label="Add project"
+              onClick={() => {
+                void handleAddProject()
+              }}
+            >
+              <span className={styles.actionGlyph}>+</span>
+            </button>
+          </Tooltip>
+        </div>
+        <div className={styles.actionSlot}>
+          <Tooltip
+            label="Settings"
+            shortcut={formatShortcut(SHORTCUT_MAP.settings.mac, SHORTCUT_MAP.settings.win)}
+          >
+            <button
+              type="button"
+              className={`${styles.sidebarToggle} ${styles.actionButton}`}
+              aria-label="Open settings"
+              onClick={toggleSettings}
+            >
+              <span className={styles.actionGlyph}>&#x2699;</span>
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+
+      {addProjectDraft && (
+        <AddProjectDialog
+          open
+          initialName={addProjectDraft.name}
+          repoPath={addProjectDraft.repoPath}
+          initialOwnership={defaultProjectOwnership}
+          onCancel={() => setAddProjectDraft(null)}
+          onConfirm={handleConfirmAddProject}
+        />
+      )}
     </div>
   )
 }

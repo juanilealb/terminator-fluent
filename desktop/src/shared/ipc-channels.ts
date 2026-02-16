@@ -96,6 +96,7 @@ export const IPC = {
   // GitHub operations
   GITHUB_GET_PR_STATUSES: 'github:get-pr-statuses',
   GITHUB_LIST_OPEN_PRS: 'github:list-open-prs',
+  GITHUB_LIST_AUTH_ACCOUNTS: 'github:list-auth-accounts',
 
   // Clipboard operations
   CLIPBOARD_SAVE_IMAGE: 'clipboard:save-image',

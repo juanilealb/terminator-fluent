@@ -249,10 +249,16 @@ const api = {
   },
 
   github: {
-    getPrStatuses: (repoPath: string, branches: string[]) =>
-      ipcRenderer.invoke(IPC.GITHUB_GET_PR_STATUSES, repoPath, branches),
-    listOpenPrs: (repoPath: string) =>
-      ipcRenderer.invoke(IPC.GITHUB_LIST_OPEN_PRS, repoPath),
+    getPrStatuses: (repoPath: string, branches: string[], preferredLogin?: string) =>
+      ipcRenderer.invoke(IPC.GITHUB_GET_PR_STATUSES, repoPath, branches, preferredLogin),
+    listOpenPrs: (repoPath: string, preferredLogin?: string) =>
+      ipcRenderer.invoke(IPC.GITHUB_LIST_OPEN_PRS, repoPath, preferredLogin),
+    listAuthAccounts: (host = 'github.com') =>
+      ipcRenderer.invoke(IPC.GITHUB_LIST_AUTH_ACCOUNTS, host) as Promise<{
+        available: boolean
+        error?: 'gh_not_installed' | 'not_authenticated' | 'not_github_repo'
+        data: string[]
+      }>,
   },
 
   clipboard: {
