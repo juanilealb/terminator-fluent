@@ -12,9 +12,10 @@ import { useAppStore } from '../../store/app-store'
 import { subscribeGitStatusChanged } from '../../utils/git-status-events'
 import { FileTree } from './FileTree'
 import { ChangedFiles } from './ChangedFiles'
+import { WorkspaceMemoryPanel } from './WorkspaceMemoryPanel'
 import styles from './RightPanel.module.css'
 
-type PanelMode = 'files' | 'changes'
+type PanelMode = 'files' | 'changes' | 'memory'
 
 export function RightPanel() {
   const {
@@ -46,11 +47,6 @@ export function RightPanel() {
   }, [worktreePath])
 
   useEffect(() => {
-    if (rightPanelMode === 'memory') {
-      setRightPanelMode('files')
-      return
-    }
-
     if (!worktreePath) {
       setChangeCount(0)
       return
@@ -70,7 +66,7 @@ export function RightPanel() {
       unsubStatus()
       window.api.fs.unwatchDir(worktreePath)
     }
-  }, [worktreePath, rightPanelMode, refreshChangeCount, setRightPanelMode])
+  }, [worktreePath, refreshChangeCount])
 
   useEffect(() => {
     if (rightPanelMode === 'changes') {
@@ -88,34 +84,42 @@ export function RightPanel() {
   return (
     <div className={styles.rightPanel}>
       <div className={styles.header}>
-        <TabList
-          selectedValue={rightPanelMode}
-          onTabSelect={handleTabSelect}
-          appearance="subtle"
-          size="small"
-          className={styles.tabList}
-        >
-          <Tab
-            value="files"
-            title={`Files (${formatShortcut(SHORTCUT_MAP.filesPanel.mac, SHORTCUT_MAP.filesPanel.win)})`}
+        <div className={styles.tabViewport}>
+          <TabList
+            selectedValue={rightPanelMode}
+            onTabSelect={handleTabSelect}
+            appearance="subtle"
+            size="small"
+            className={styles.tabList}
           >
-            Files
-          </Tab>
-          <Tab
-            value="changes"
-            title={`Changes (${formatShortcut(SHORTCUT_MAP.changesPanel.mac, SHORTCUT_MAP.changesPanel.win)})`}
-          >
-            Changes
-            {changeCount > 0 && (
-              <CounterBadge
-                count={changeCount}
-                size="small"
-                appearance="filled"
-                className={styles.badge}
-              />
-            )}
-          </Tab>
-        </TabList>
+            <Tab
+              value="files"
+              title={`Files (${formatShortcut(SHORTCUT_MAP.filesPanel.mac, SHORTCUT_MAP.filesPanel.win)})`}
+            >
+              Files
+            </Tab>
+            <Tab
+              value="changes"
+              title={`Changes (${formatShortcut(SHORTCUT_MAP.changesPanel.mac, SHORTCUT_MAP.changesPanel.win)})`}
+            >
+              Changes
+              {changeCount > 0 && (
+                <CounterBadge
+                  count={changeCount}
+                  size="small"
+                  appearance="filled"
+                  className={styles.badge}
+                />
+              )}
+            </Tab>
+            <Tab
+              value="memory"
+              title={`Memory (${formatShortcut(SHORTCUT_MAP.memoryPanel.mac, SHORTCUT_MAP.memoryPanel.win)})`}
+            >
+              Memory
+            </Tab>
+          </TabList>
+        </div>
       </div>
 
       <div className={styles.content}>
@@ -137,6 +141,9 @@ export function RightPanel() {
                 workspaceId={workspace.id}
                 isActive={rightPanelMode === 'changes'}
               />
+            </div>
+            <div style={{ display: rightPanelMode === 'memory' ? 'contents' : 'none' }}>
+              <WorkspaceMemoryPanel workspace={workspace} />
             </div>
           </>
         )}

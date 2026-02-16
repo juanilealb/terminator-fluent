@@ -10,13 +10,52 @@
 
 /* ── Title Area ── */
 .titleArea {
-  height: var(--titlebar-height);
+  height: 40px;
   padding: 0;
   border-bottom: 1px solid var(--colorNeutralStroke2);
   display: flex;
   align-items: center;
   justify-content: flex-start;
   -webkit-app-region: drag;
+}
+
+.sidebarToggleSlot {
+  width: 30px;
+  flex: 0 0 30px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebarToggle {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--colorNeutralBackground3) 0%, var(--colorNeutralBackground2) 100%);
+  color: var(--colorNeutralForeground2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background var(--durationFaster) var(--curveEasyEase),
+    border-color var(--durationFaster) var(--curveEasyEase),
+    color var(--durationFaster) var(--curveEasyEase);
+}
+
+.sidebarToggle:hover {
+  background: var(--colorSubtleBackgroundHover);
+  border-color: var(--colorNeutralStroke1);
+  color: var(--colorNeutralForeground1);
+}
+
+.sidebarToggleGlyph {
+  font-size: 12px;
+  line-height: 1;
+  margin-top: -1px;
 }
 
 /* ── Project List ── */
@@ -885,10 +924,12 @@
 /* ── Bottom Actions (Divider + Fluent Buttons) ── */
 .actions {
   border-top: 1px solid var(--colorNeutralStroke2);
-  background: var(--colorNeutralBackground3);
-  padding: var(--spacingVerticalXS);
+  background: var(--colorNeutralBackground2);
+  min-height: 78px;
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
 }
 
@@ -896,12 +937,15 @@
 .actionButton {
   width: 100%;
   justify-content: flex-start !important;
-  padding: 6px var(--spacingHorizontalS) !important;
+  padding: 6px var(--spacingHorizontalS) 6px 0 !important;
   font-size: var(--fontSizeBase200) !important;
   min-height: 32px;
 }
 
 .actionButton span[class*="icon"] {
+  width: 30px;
+  min-width: 30px;
+  margin-right: 0;
   color: var(--colorNeutralForeground3);
 }
 
@@ -913,6 +957,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.footerActionIcon {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--colorNeutralBackground3) 0%, var(--colorNeutralBackground2) 100%);
+  color: var(--colorNeutralForeground2);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.actionButton:hover .footerActionIcon {
+  border-color: var(--colorNeutralStroke1);
+  background: var(--colorSubtleBackgroundHover);
+  color: var(--colorNeutralForeground1);
 }
 
 /* ── Section Divider ── */

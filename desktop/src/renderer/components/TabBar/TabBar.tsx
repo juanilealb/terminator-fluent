@@ -2,11 +2,10 @@ import { useCallback, useRef } from 'react'
 import {
   TabList,
   Tab as FluentTab,
-  Button,
   type SelectTabData,
   type SelectTabEvent,
 } from '@fluentui/react-components'
-import { DismissRegular, AddRegular } from '@fluentui/react-icons'
+import { DismissRegular } from '@fluentui/react-icons'
 import { basenameSafe, formatShortcut, toPosixPath } from '@shared/platform'
 import { SHORTCUT_MAP } from '@shared/shortcuts'
 import { useAppStore } from '../../store/app-store'
@@ -34,6 +33,8 @@ export function TabBar() {
     removeTab,
     activeWorkspaceTabs,
     createTerminalForActiveWorkspace,
+    rightPanelOpen,
+    toggleRightPanel,
     lastSavedTabId,
     settings,
     showConfirmDialog,
@@ -95,6 +96,22 @@ export function TabBar() {
 
   return (
     <div className={styles.tabBar}>
+      <div className={styles.leftControls}>
+        <Tooltip
+          label="New terminal"
+          shortcut={formatShortcut(SHORTCUT_MAP.newTerminal.mac, SHORTCUT_MAP.newTerminal.win)}
+        >
+          <button
+            type="button"
+            className={`${styles.edgeButton} ${styles.plusButton}`}
+            onClick={createTerminalForActiveWorkspace}
+            aria-label="New terminal tab"
+          >
+            <span className={styles.plusGlyph}>+</span>
+          </button>
+        </Tooltip>
+      </div>
+
       <div ref={tabListRef} className={styles.tabListScroller} onWheel={handleWheel}>
       <TabList
         selectedValue={activeTabId}
@@ -142,21 +159,21 @@ export function TabBar() {
       </TabList>
       </div>
 
-      <Tooltip
-        label="New terminal"
-        shortcut={formatShortcut(SHORTCUT_MAP.newTerminal.mac, SHORTCUT_MAP.newTerminal.win)}
-      >
-        <Button
-          appearance="subtle"
-          size="small"
-          icon={<AddRegular />}
-          className={styles.newTabButton}
-          onClick={createTerminalForActiveWorkspace}
-          aria-label="New terminal tab"
-        />
-      </Tooltip>
-
-      <div className={styles.dragSpacer} />
+      <div className={styles.rightControls}>
+        <Tooltip
+          label={rightPanelOpen ? 'Hide right panel' : 'Show right panel'}
+          shortcut={formatShortcut(SHORTCUT_MAP.toggleRightPanel.mac, SHORTCUT_MAP.toggleRightPanel.win)}
+        >
+          <button
+            type="button"
+            className={`${styles.edgeButton} ${styles.rightEdgeButton}`}
+            onClick={toggleRightPanel}
+            aria-label={rightPanelOpen ? 'Hide right panel' : 'Show right panel'}
+          >
+            <span className={styles.edgeGlyph}>{rightPanelOpen ? '\u203a' : '\u2039'}</span>
+          </button>
+        </Tooltip>
+      </div>
     </div>
   )
 }

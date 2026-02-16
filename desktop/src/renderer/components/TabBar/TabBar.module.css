@@ -1,15 +1,30 @@
-/* ── Tab bar container (titlebar drag region) ── */
 .tabBar {
   height: 40px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   border-bottom: 1px solid var(--border-muted);
   overflow: hidden;
   padding-right: var(--window-controls-width-tabbar);
   -webkit-app-region: drag;
 }
 
-/* ── Scrollable tab list wrapper ── */
+.leftControls,
+.rightControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.leftControls {
+  padding: 0 6px 0 8px;
+}
+
+.rightControls {
+  padding: 0 8px;
+}
+
 .tabListScroller {
   flex: 1;
   min-width: 0;
@@ -22,14 +37,12 @@
   height: 0;
 }
 
-/* ── Fluent TabList overrides ── */
 .tabList {
   min-width: 0;
   align-items: flex-end;
   padding-left: 2px;
 }
 
-/* ── Individual tab (Fluent Tab overrides) ── */
 .tab {
   min-width: 80px;
   max-width: 180px;
@@ -40,7 +53,6 @@
   padding: 0 8px;
 }
 
-/* ── Tab content layout (title + close) ── */
 .tabContent {
   display: inline-flex;
   align-items: center;
@@ -49,7 +61,6 @@
   width: 100%;
 }
 
-/* ── Tab type icons ── */
 .tabIcon {
   font-size: var(--font-size-xs);
   opacity: 0.9;
@@ -67,7 +78,6 @@
   color: var(--accent-orange);
 }
 
-/* ── Tab title ── */
 .tabTitle {
   flex: 1;
   min-width: 0;
@@ -76,7 +86,6 @@
   white-space: nowrap;
 }
 
-/* ── Unsaved indicator dot ── */
 .unsavedDot {
   width: 7px;
   height: 7px;
@@ -86,7 +95,6 @@
   flex-shrink: 0;
 }
 
-/* ── Saved flash animation ── */
 .savedFlash {
   animation: savedPulse 1s ease-out forwards;
 }
@@ -101,7 +109,6 @@
   }
 }
 
-/* ── Close button ── */
 .closeButton {
   width: 20px;
   height: 20px;
@@ -133,15 +140,51 @@
   background: var(--bg-surface-hover);
 }
 
-/* ── New tab button ── */
-.newTabButton {
-  margin: auto var(--space-1);
-  flex-shrink: 0;
-  -webkit-app-region: no-drag;
+.edgeButton {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-panel) 100%);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-/* ── Drag spacer (fills remaining titlebar) ── */
-.dragSpacer {
-  flex: 1;
-  -webkit-app-region: drag;
+.edgeButton:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 35%, transparent);
+}
+
+.edgeButton:active {
+  transform: translateY(1px);
+}
+
+.rightEdgeButton,
+.plusButton {
+  flex-shrink: 0;
+}
+
+.edgeGlyph {
+  font-size: 12px;
+  line-height: 1;
+  font-weight: var(--weight-medium);
+  margin-top: -1px;
+}
+
+.plusGlyph {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: var(--weight-semibold);
 }

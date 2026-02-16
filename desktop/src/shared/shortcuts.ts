@@ -19,6 +19,7 @@ export const SHORTCUT_MAP: Record<string, ShortcutBinding> = {
   toggleRightPanel: { mac: 'Ctrl+Alt+B', win: 'Ctrl+Alt+B' },
   filesPanel: { mac: 'Ctrl+Shift+E', win: 'Ctrl+Shift+E' },
   changesPanel: { mac: 'Ctrl+Shift+G', win: 'Ctrl+Shift+G' },
+  memoryPanel: { mac: 'Ctrl+Shift+M', win: 'Ctrl+Shift+M' },
   focusTerminal: { mac: 'Ctrl+J', win: 'Ctrl+J' },
   increaseFontSize: { mac: 'Ctrl++', win: 'Ctrl++' },
   decreaseFontSize: { mac: 'Ctrl+-', win: 'Ctrl+-' },

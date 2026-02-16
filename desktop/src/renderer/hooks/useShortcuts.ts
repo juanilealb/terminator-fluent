@@ -198,6 +198,12 @@ export function useShortcuts() {
         if (!store.rightPanelOpen) store.toggleRightPanel()
         return
       }
+      if (shift && !alt && e.code === 'KeyM') {
+        consume()
+        store.setRightPanelMode('memory')
+        if (!store.rightPanelOpen) store.toggleRightPanel()
+        return
+      }
 
       // Focus
       if (!shift && !alt && e.key === 'j') {
