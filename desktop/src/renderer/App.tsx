@@ -17,6 +17,7 @@ import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { QuickOpen } from './components/QuickOpen/QuickOpen'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { ToastContainer } from './components/Toast/Toast'
+import { WindowControls } from './components/WindowControls/WindowControls'
 import { useShortcuts } from './hooks/useShortcuts'
 import { usePrStatusPoller } from './hooks/usePrStatusPoller'
 import styles from './App.module.css'
@@ -140,6 +141,7 @@ export function App() {
   useShortcuts()
   usePrStatusPoller()
   const [osTheme, setOsTheme] = useState<ThemeChangedPayload>(DEFAULT_THEME)
+  const isWindows = navigator.userAgent.toLowerCase().includes('windows')
 
   // Listen for workspace notification signals from Claude Code hooks
   useEffect(() => {
@@ -207,9 +209,9 @@ export function App() {
   const activeAgents = runningAgentCount
   const waitingAgents = waitingAgentCount
   const appStyle = {
-    '--window-controls-width': '0px',
-    '--window-controls-width-tabbar': '0px',
-    '--window-controls-width-right-panel': '0px',
+    '--window-controls-width': isWindows ? '132px' : '0px',
+    '--window-controls-width-tabbar': isWindows && !rightPanelOpen ? '132px' : '0px',
+    '--window-controls-width-right-panel': isWindows && rightPanelOpen ? '132px' : '0px',
   } as CSSProperties
 
   // All terminal tabs across every workspace — kept alive to preserve PTY state
@@ -240,6 +242,11 @@ export function App() {
   return (
     <FluentProvider theme={fluentTheme} style={{ background: 'transparent' }}>
       <div className={styles.app} style={appStyle}>
+        {isWindows && (
+          <div className={styles.windowControlsOverlay}>
+            <WindowControls />
+          </div>
+        )}
         <div className={styles.layout}>
           {settingsOpen ? (
             <SettingsPanel />
