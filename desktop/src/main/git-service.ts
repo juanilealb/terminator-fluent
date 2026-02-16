@@ -6,6 +6,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { CreateWorktreeProgress } from '../shared/workspace-creation'
 
 const execFileAsync = promisify(execFile)
+const ORIGIN_FETCH_TTL_MS = 90_000
+const lastOriginFetchByRepo = new Map<string, number>()
 
 type CreateWorktreeProgressReporter = (progress: CreateWorktreeProgress) => void
 
@@ -49,7 +51,7 @@ export interface ShipToMainResult {
   prCreated: boolean
 }
 
-const SNAPSHOT_PREFIX = '[terminator:snapshot]'
+const SNAPSHOT_PREFIX = '[terminator-fluent:snapshot]'
 
 export interface PrWorktreeResult {
   worktreePath: string
@@ -154,6 +156,22 @@ function samePath(a: string, b: string): boolean {
     return left.toLowerCase() === right.toLowerCase()
   }
   return left === right
+}
+
+function repoCacheKey(repoPath: string): string {
+  const normalized = resolve(repoPath)
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+function shouldFetchOrigin(repoPath: string, ttlMs = ORIGIN_FETCH_TTL_MS): boolean {
+  const key = repoCacheKey(repoPath)
+  const lastFetchAt = lastOriginFetchByRepo.get(key)
+  if (!lastFetchAt) return true
+  return (Date.now() - lastFetchAt) > ttlMs
+}
+
+function markOriginFetched(repoPath: string): void {
+  lastOriginFetchByRepo.set(repoCacheKey(repoPath), Date.now())
 }
 
 interface GithubRepoRef {
@@ -334,12 +352,18 @@ export class GitService {
     })
     await git(['worktree', 'prune'], repoPath).catch(() => {})
 
-    // Fetch remote refs so worktree branches from latest state
+    // Fetch remote refs so worktree branches from latest state.
+    // Skip if we already fetched recently to keep repeated workspace creation snappy.
     reportCreateWorktreeProgress(onProgress, {
       stage: 'fetch-origin',
-      message: 'Syncing remote...',
+      message: shouldFetchOrigin(repoPath) ? 'Syncing remote...' : 'Using recent remote sync...',
     })
-    await git(['fetch', '--prune', 'origin'], repoPath)
+    let fetchedOrigin = false
+    if (shouldFetchOrigin(repoPath)) {
+      await git(['fetch', '--prune', 'origin'], repoPath)
+      markOriginFetched(repoPath)
+      fetchedOrigin = true
+    }
 
     // Auto-detect base branch when creating a new branch without explicit base
     if (newBranch && !baseBranch) {
@@ -372,8 +396,19 @@ export class GitService {
     // If checking out an existing branch that doesn't exist locally or on origin,
     // try fetching it as a GitHub PR branch (fork PRs aren't included in normal fetch)
     if (!newBranch && !branchExists) {
-      const remoteExists = await git(['rev-parse', '--verify', `refs/remotes/origin/${branch}`], repoPath)
+      let remoteExists = await git(['rev-parse', '--verify', `refs/remotes/origin/${branch}`], repoPath)
         .then(() => true, () => false)
+      if (!remoteExists && !fetchedOrigin) {
+        reportCreateWorktreeProgress(onProgress, {
+          stage: 'fetch-origin',
+          message: 'Syncing remote for branch lookup...',
+        })
+        await git(['fetch', '--prune', 'origin'], repoPath)
+        markOriginFetched(repoPath)
+        fetchedOrigin = true
+        remoteExists = await git(['rev-parse', '--verify', `refs/remotes/origin/${branch}`], repoPath)
+          .then(() => true, () => false)
+      }
       if (!remoteExists) {
         try {
           const headCandidates = [requestedBranch]
@@ -479,10 +514,17 @@ export class GitService {
 
     reportCreateWorktreeProgress(onProgress, {
       stage: 'fetch-origin',
-      message: `Fetching PR #${parsedPrNumber}...`,
+      message: shouldFetchOrigin(repoPath) ? 'Syncing remote...' : 'Using recent remote sync...',
     })
     try {
-      await git(['fetch', '--prune', 'origin'], repoPath).catch(() => {})
+      if (shouldFetchOrigin(repoPath)) {
+        await git(['fetch', '--prune', 'origin'], repoPath).catch(() => {})
+        markOriginFetched(repoPath)
+      }
+      reportCreateWorktreeProgress(onProgress, {
+        stage: 'fetch-origin',
+        message: `Fetching PR #${parsedPrNumber}...`,
+      })
       await git(['fetch', 'origin', `+pull/${parsedPrNumber}/head:${branch}`], repoPath)
     } catch (err) {
       const msg = friendlyGitError(err, `Failed to fetch PR #${parsedPrNumber}`)

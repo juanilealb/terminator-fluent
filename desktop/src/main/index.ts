@@ -232,9 +232,9 @@ function createWindow(): void {
   schedulePendingWindowCommandFlush()
 }
 
-app.setName('Terminator')
+app.setName('Terminator Fluent')
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.terminator.app')
+  app.setAppUserModelId('com.terminator-fluent.app')
 }
 
 app.commandLine.appendSwitch('enable-gpu-rasterization')
@@ -244,7 +244,7 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding')
 
 if (customProfileName) {
   const safeProfileName = customProfileName.replace(/[^a-zA-Z0-9_-]/g, '-')
-  app.setPath('userData', join(app.getPath('appData'), `Terminator-${safeProfileName}`))
+  app.setPath('userData', join(app.getPath('appData'), `Terminator-Fluent-${safeProfileName}`))
 }
 
 const hasSingleInstanceLock = allowMultiInstance ? true : app.requestSingleInstanceLock()
@@ -262,7 +262,7 @@ function setupWindowsJumpList(): void {
         {
           type: 'task',
           title: 'New Terminal',
-          description: 'Start Terminator and open a new terminal',
+          description: 'Start Terminator Fluent and open a new terminal',
           program: process.execPath,
           args: '--jump-new-terminal',
           iconPath: process.execPath,
@@ -271,7 +271,7 @@ function setupWindowsJumpList(): void {
         {
           type: 'task',
           title: 'Open Project',
-          description: 'Start Terminator and open the project picker',
+          description: 'Start Terminator Fluent and open the project picker',
           program: process.execPath,
           args: '--jump-open-project',
           iconPath: process.execPath,
@@ -286,7 +286,7 @@ function setupWindowsJumpList(): void {
 if (process.env.CI_TEST) {
   const { mkdtempSync } = require('fs')
   const { join } = require('path')
-  const testData = mkdtempSync(join(require('os').tmpdir(), 'terminator-test-'))
+  const testData = mkdtempSync(join(require('os').tmpdir(), 'terminator-fluent-test-'))
   app.setPath('userData', testData)
 }
 

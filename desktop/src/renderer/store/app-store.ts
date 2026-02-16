@@ -86,7 +86,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   workspaces: [],
   tabs: [],
-  automations: [],
   activeWorkspaceId: null,
   activeTabId: null,
   lastActiveTabByWorkspace: {},
@@ -97,7 +96,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   workspaceDialogProjectId: null,
   settings: { ...DEFAULT_SETTINGS },
   settingsOpen: false,
-  automationsOpen: false,
   confirmDialog: null,
   toasts: [],
   quickOpenVisible: false,
@@ -110,7 +108,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   prStatusMap: new Map(),
   ghAvailability: new Map(),
   ghErrorMap: new Map(),
-  previewUrlByWorkspace: {},
 
   addProject: (project) =>
     set((s) => ({
@@ -125,14 +122,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   removeProject: (id) =>
     set((s) => {
-      // Clean up automations for this project in main process
-      const projectAutomations = s.automations.filter((a) => a.projectId === id)
-      for (const a of projectAutomations) {
-        window.api.automations.delete(a.id)
-      }
       const removedWsIds = new Set(s.workspaces.filter((w) => w.projectId === id).map((w) => w.id))
       const tabMap = { ...s.lastActiveTabByWorkspace }
-      const previewUrlByWorkspace = { ...s.previewUrlByWorkspace }
       const unreadWorkspaceIds = new Set(
         Array.from(s.unreadWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)),
       )
@@ -143,18 +134,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         Array.from(s.waitingClaudeWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)),
       )
       for (const wsId of removedWsIds) delete tabMap[wsId]
-      for (const wsId of removedWsIds) delete previewUrlByWorkspace[wsId]
       return {
         projects: s.projects.filter((p) => p.id !== id),
         workspaces: s.workspaces.filter((w) => w.projectId !== id),
-        automations: s.automations.filter((a) => a.projectId !== id),
         unreadWorkspaceIds,
         activeClaudeWorkspaceIds,
         waitingClaudeWorkspaceIds,
         runningAgentCount: activeClaudeWorkspaceIds.size,
         waitingAgentCount: waitingClaudeWorkspaceIds.size,
         lastActiveTabByWorkspace: tabMap,
-        previewUrlByWorkspace,
       }
     }),
 
@@ -175,9 +163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       newActiveClaude.delete(id)
       newWaitingClaude.delete(id)
       const tabMap = { ...s.lastActiveTabByWorkspace }
-      const previewUrlByWorkspace = { ...s.previewUrlByWorkspace }
       delete tabMap[id]
-      delete previewUrlByWorkspace[id]
       return {
         workspaces: newWorkspaces,
         tabs: newTabs,
@@ -187,7 +173,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         runningAgentCount: newActiveClaude.size,
         waitingAgentCount: newWaitingClaude.size,
         lastActiveTabByWorkspace: tabMap,
-        previewUrlByWorkspace,
         activeWorkspaceId:
           s.activeWorkspaceId === id
             ? newWorkspaces[0]?.id ?? null
@@ -627,8 +612,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: (partial) =>
     set((s) => ({ settings: { ...s.settings, ...partial } })),
 
-  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen, automationsOpen: false })),
-  toggleAutomations: () => set((s) => ({ automationsOpen: !s.automationsOpen, settingsOpen: false })),
+  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen })),
 
   showConfirmDialog: (dialog) => set({ confirmDialog: dialog }),
 
@@ -645,13 +629,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleCommandPalette: () => set((s) => ({ commandPaletteVisible: !s.commandPaletteVisible })),
   openCommandPalette: () => set({ commandPaletteVisible: true }),
   closeCommandPalette: () => set({ commandPaletteVisible: false }),
-  setPreviewUrl: (workspaceId, url) =>
-    set((s) => ({
-      previewUrlByWorkspace: {
-        ...s.previewUrlByWorkspace,
-        [workspaceId]: url,
-      },
-    })),
 
   markWorkspaceUnread: (workspaceId) =>
     set((s) => {
@@ -709,17 +686,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { ghAvailability: newAvail, ghErrorMap: newErrors }
     }),
 
-  addAutomation: (automation) =>
-    set((s) => ({ automations: [...s.automations, automation] })),
-
-  updateAutomation: (id, partial) =>
-    set((s) => ({
-      automations: s.automations.map((a) => (a.id === id ? { ...a, ...partial } : a)),
-    })),
-
-  removeAutomation: (id) =>
-    set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
-
   openDiffTab: (workspaceId) => {
     const s = get()
     const existing = s.tabs.find(
@@ -758,12 +724,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       projects,
       workspaces,
       tabs,
-      automations: data.automations ?? [],
       activeWorkspaceId,
       activeTabId,
       lastActiveTabByWorkspace: data.lastActiveTabByWorkspace ?? {},
       settings,
-      previewUrlByWorkspace: data.previewUrlByWorkspace ?? {},
     })
   },
 
@@ -786,12 +750,10 @@ function getPersistedSlice(state: AppState): PersistedState {
     projects: state.projects,
     workspaces: state.workspaces,
     tabs: state.tabs,
-    automations: state.automations,
     activeWorkspaceId: state.activeWorkspaceId,
     activeTabId: state.activeTabId,
     lastActiveTabByWorkspace: state.lastActiveTabByWorkspace,
     settings: state.settings,
-    previewUrlByWorkspace: state.previewUrlByWorkspace,
   }
 }
 
@@ -811,10 +773,8 @@ useAppStore.subscribe((state, prevState) => {
     state.workspaces !== prevState.workspaces ||
     state.tabs !== prevState.tabs ||
     state.activeTabId !== prevState.activeTabId ||
-    state.automations !== prevState.automations ||
     state.activeWorkspaceId !== prevState.activeWorkspaceId ||
-    state.settings !== prevState.settings ||
-    state.previewUrlByWorkspace !== prevState.previewUrlByWorkspace
+    state.settings !== prevState.settings
   ) {
     debouncedSave(state)
   }
@@ -891,56 +851,4 @@ export async function hydrateFromDisk(): Promise<void> {
   } catch (err) {
     console.error('Failed to reconcile PTY tabs:', err)
   }
-
-  // Schedule all enabled automations on startup
-  const state = useAppStore.getState()
-  for (const automation of state.automations) {
-    if (!automation.enabled) continue
-    const project = state.projects.find((p) => p.id === automation.projectId)
-    if (!project) continue
-    window.api.automations.create({
-      ...automation,
-      repoPath: project.repoPath,
-    })
-  }
-
-  // Listen for automation run-started events from main process
-  window.api.automations.onRunStarted((data) => {
-    const store = useAppStore.getState()
-    const { automationId, automationName, projectId, ptyId, worktreePath, branch } = data
-    const project = store.projects.find((p) => p.id === projectId)
-    if (!project) return
-
-    // Create workspace for the run
-    const now = new Date()
-    const timestamp = now.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric',
-    }) + ' ' + now.toLocaleTimeString('en-US', {
-      hour: 'numeric', minute: '2-digit',
-    })
-    const wsId = crypto.randomUUID()
-    store.addWorkspace({
-      id: wsId,
-      type: DEFAULT_WORKSPACE_TYPE,
-      name: `${automationName} · ${timestamp}`,
-      branch: branch || '',
-      worktreePath: worktreePath || project.repoPath,
-      projectId,
-      automationId,
-      agentPermissionMode: DEFAULT_AGENT_PERMISSION_MODE,
-    })
-
-    // Create terminal tab for the run
-    store.addTab({
-      id: crypto.randomUUID(),
-      workspaceId: wsId,
-      type: 'terminal',
-      title: automationName,
-      ptyId,
-    })
-
-    // Update automation lastRunAt
-    store.updateAutomation(automationId, { lastRunAt: Date.now() })
-  })
 }
-

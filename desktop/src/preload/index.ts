@@ -248,26 +248,6 @@ const api = {
       ipcRenderer.invoke(IPC.CODEX_CHECK_NOTIFY),
   },
 
-  automations: {
-    create: (automation: unknown) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_CREATE, automation),
-    update: (automation: unknown) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_UPDATE, automation),
-    delete: (automationId: string) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_DELETE, automationId),
-    runNow: (automation: unknown) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_RUN_NOW, automation),
-    stop: (automationId: string) =>
-      ipcRenderer.invoke(IPC.AUTOMATION_STOP, automationId),
-    onRunStarted: (callback: (data: { automationId: string; automationName: string; projectId: string; ptyId: string; worktreePath: string; branch: string }) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, data: { automationId: string; automationName: string; projectId: string; ptyId: string; worktreePath: string; branch: string }) => callback(data)
-      ipcRenderer.on(IPC.AUTOMATION_RUN_STARTED, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.AUTOMATION_RUN_STARTED, listener)
-      }
-    },
-  },
-
   github: {
     getPrStatuses: (repoPath: string, branches: string[]) =>
       ipcRenderer.invoke(IPC.GITHUB_GET_PR_STATUSES, repoPath, branches),

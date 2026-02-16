@@ -5,7 +5,6 @@ This guide covers day to day usage of the app, including the new workflow featur
 - command palette and slash commands
 - workspace memory
 - prompt templates with mentions
-- local preview panel
 - git snapshots
 - quick terminal start without pre creating a workspace
 
@@ -124,8 +123,6 @@ Slash commands:
 - `/files`
 - `/changes`
 - `/memory`
-- `/preview`
-- `/preview-url <port-or-url>`
 - `/snapshot [label]`
 - `/restore-latest`
 - `/template <name>`
@@ -133,7 +130,6 @@ Slash commands:
 
 Examples:
 
-- `/preview-url 5173`
 - `/snapshot before-refactor`
 - `/template bug triage`
 
@@ -172,19 +168,7 @@ Important behavior:
 - restore applies snapshot on top of current files
 - this is not a hard reset
 
-## 9. Automations
-
-Automations let you schedule recurring prompts per project.
-
-Flow:
-
-1. open `Automations`
-2. create automation with name, prompt, schedule
-3. enable/disable, run now, edit, or delete
-
-Schedules are cron expressions with presets plus custom mode.
-
-## 10. Integrations and hooks
+## 9. Integrations and hooks
 
 In `Settings -> Agent integrations` you can install:
 
@@ -193,7 +177,7 @@ In `Settings -> Agent integrations` you can install:
 
 These power unread and activity indicators in workspaces.
 
-## 11. Keyboard shortcut summary
+## 10. Keyboard shortcut summary
 
 - `Ctrl+P`: quick open file
 - `Ctrl+Shift+P`: command palette
@@ -210,7 +194,6 @@ These power unread and activity indicators in workspaces.
 - `Ctrl+Shift+E`: files panel
 - `Ctrl+Shift+G`: changes panel
 - `Ctrl+Shift+M`: memory panel
-- `Ctrl+Shift+V`: preview panel
 - `Ctrl+Enter`: commit staged changes
 - `Ctrl+,`: settings
 - `Ctrl+=`, `Ctrl+-`, `Ctrl+0`: font controls
@@ -221,7 +204,7 @@ Terminal local shortcuts:
 - `Ctrl+Shift+V`, `Shift+Insert`: paste
 - `Ctrl+F`: find in scrollback
 
-## 12. Build and installer
+## 11. Build and installer
 
 From repo root:
 

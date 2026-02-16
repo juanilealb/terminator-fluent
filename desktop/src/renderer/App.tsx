@@ -14,7 +14,6 @@ import { FileEditor } from './components/Editor/FileEditor'
 import { DiffViewer } from './components/Editor/DiffEditor'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
-import { AutomationsPanel } from './components/Automations/AutomationsPanel'
 import { QuickOpen } from './components/QuickOpen/QuickOpen'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { ToastContainer } from './components/Toast/Toast'
@@ -195,7 +194,6 @@ export function App() {
     activeWorkspaceId,
     settings,
     settingsOpen,
-    automationsOpen,
     quickOpenVisible,
     commandPaletteVisible,
     runningAgentCount,
@@ -245,8 +243,6 @@ export function App() {
         <div className={styles.layout}>
           {settingsOpen ? (
             <SettingsPanel />
-          ) : automationsOpen ? (
-            <AutomationsPanel />
           ) : (
             <Allotment>
               {/* Sidebar */}
@@ -277,7 +273,7 @@ export function App() {
 
                     {!activeTab ? (
                       <div className={styles.welcome}>
-                        <div className={styles.welcomeLogo}>terminator</div>
+                        <div className={styles.welcomeLogo}>terminator fluent</div>
                         <div className={styles.welcomeHint}>
                           Add a project to get started, or press
                           <span className={styles.welcomeShortcut}>

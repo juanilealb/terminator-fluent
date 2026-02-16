@@ -400,7 +400,6 @@ export function Sidebar() {
   const showConfirmDialog = useAppStore((s) => s.showConfirmDialog);
   const dismissConfirmDialog = useAppStore((s) => s.dismissConfirmDialog);
   const toggleSettings = useAppStore((s) => s.toggleSettings);
-  const toggleAutomations = useAppStore((s) => s.toggleAutomations);
   const unreadWorkspaceIds = useAppStore((s) => s.unreadWorkspaceIds);
   const activeClaudeWorkspaceIds = useAppStore((s) => s.activeClaudeWorkspaceIds);
   const waitingClaudeWorkspaceIds = useAppStore((s) => s.waitingClaudeWorkspaceIds);
@@ -995,7 +994,7 @@ export function Sidebar() {
                         }}
                       >
                         <span className={styles.workspaceIcon}>
-                          {ws.automationId ? "\u23F1" : "\u2387"}
+                          {"\u2387"}
                         </span>
                         <div className={styles.workspaceNameCol}>
                           {isEditing ? (
@@ -1080,16 +1079,6 @@ export function Sidebar() {
             icon={<span className={styles.actionIcon}>+</span>}
           >
             Add project
-          </Button>
-        </Tooltip>
-        <Tooltip label="Automations">
-          <Button
-            appearance="subtle"
-            className={styles.actionButton}
-            onClick={toggleAutomations}
-            icon={<span className={styles.actionIcon}>{"\u23F1"}</span>}
-          >
-            Automations
           </Button>
         </Tooltip>
         <Tooltip

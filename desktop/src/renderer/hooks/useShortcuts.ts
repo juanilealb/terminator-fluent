@@ -204,12 +204,6 @@ export function useShortcuts() {
         if (!store.rightPanelOpen) store.toggleRightPanel()
         return
       }
-      if (shift && !alt && e.code === 'KeyV') {
-        consume()
-        store.setRightPanelMode('preview')
-        if (!store.rightPanelOpen) store.toggleRightPanel()
-        return
-      }
 
       // Focus
       if (!shift && !alt && e.key === 'j') {

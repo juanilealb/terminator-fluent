@@ -93,15 +93,6 @@ export const IPC = {
   CODEX_UNINSTALL_NOTIFY: 'codex:uninstall-notify',
   CODEX_CHECK_NOTIFY: 'codex:check-notify',
 
-  // Automation operations
-  AUTOMATION_CREATE: 'automation:create',
-  AUTOMATION_UPDATE: 'automation:update',
-  AUTOMATION_DELETE: 'automation:delete',
-  AUTOMATION_LIST: 'automation:list',
-  AUTOMATION_RUN_NOW: 'automation:run-now',
-  AUTOMATION_STOP: 'automation:stop',
-  AUTOMATION_RUN_STARTED: 'automation:run-started',
-
   // GitHub operations
   GITHUB_GET_PR_STATUSES: 'github:get-pr-statuses',
   GITHUB_LIST_OPEN_PRS: 'github:list-open-prs',

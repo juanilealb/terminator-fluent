@@ -12,12 +12,10 @@ import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
 import { GithubService } from './github-service'
 import { FileService } from './file-service'
-import { AutomationScheduler, type AutomationConfig } from './automation-scheduler'
 import { trustPathForClaude, loadClaudeSettings, saveClaudeSettings, loadJsonFile, saveJsonFile } from './claude-config'
 import { loadCodexConfigText, saveCodexConfigText } from './codex-config'
 
 const ptyManager = new PtyManager()
-const automationScheduler = new AutomationScheduler(ptyManager)
 
 // Filesystem watchers: dirPath → { watcher, debounceTimer }
 const fsWatchers = new Map<string, { watcher: FSWatcher; timer: ReturnType<typeof setTimeout> | null }>()
@@ -791,40 +789,12 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}): void {
     return { success: true }
   })
 
-  // ── Automation handlers ──
-  ipcMain.handle(IPC.AUTOMATION_CREATE, async (_e, automation: AutomationConfig) => {
-    automationScheduler.schedule(automation)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_UPDATE, async (_e, automation: AutomationConfig) => {
-    automationScheduler.schedule(automation) // reschedules
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_DELETE, async (_e, automationId: string) => {
-    automationScheduler.unschedule(automationId)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_RUN_NOW, async (_e, automation: AutomationConfig) => {
-    automationScheduler.runNow(automation)
-  })
-
-  ipcMain.handle(IPC.AUTOMATION_STOP, async (_e, automationId: string) => {
-    automationScheduler.unschedule(automationId)
-  })
-
-  // Load persisted automations and schedule enabled ones on startup
-  ipcMain.handle(IPC.AUTOMATION_LIST, async () => {
-    // List is just for init — renderer manages the list in store
-    // Main process uses this to bootstrap scheduler from persisted state
-    return null
-  })
-
   // ── Clipboard handlers ──
   ipcMain.handle(IPC.CLIPBOARD_SAVE_IMAGE, async () => {
     const img = clipboard.readImage()
     if (img.isEmpty()) return null
     const buf = img.toPNG()
-    const filePath = join(tmpdir(), `terminator-paste-${Date.now()}.png`)
+    const filePath = join(tmpdir(), `terminator-fluent-paste-${Date.now()}.png`)
     await writeFile(filePath, buf)
     return filePath
   })
@@ -839,7 +809,7 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}): void {
 
   // ── State persistence handlers ──
   const stateFilePath = () =>
-    join(app.getPath('userData'), 'terminator-state.json')
+    join(app.getPath('userData'), 'terminator-fluent-state.json')
 
   ipcMain.handle(IPC.STATE_SAVE, async (_e, data: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })

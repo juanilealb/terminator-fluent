@@ -43,7 +43,6 @@ const SHORTCUTS: Array<{ action: string; binding: ShortcutBinding }> = [
   { action: 'Files panel', binding: SHORTCUT_MAP.filesPanel },
   { action: 'Changes panel', binding: SHORTCUT_MAP.changesPanel },
   { action: 'Memory panel', binding: SHORTCUT_MAP.memoryPanel },
-  { action: 'Preview panel', binding: SHORTCUT_MAP.previewPanel },
   { action: 'Focus terminal', binding: SHORTCUT_MAP.focusTerminal },
   { action: 'Increase font size', binding: SHORTCUT_MAP.increaseFontSize },
   { action: 'Decrease font size', binding: SHORTCUT_MAP.decreaseFontSize },

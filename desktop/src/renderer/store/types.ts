@@ -20,18 +20,6 @@ export function isWorkspaceType(value: unknown): value is WorkspaceType {
   return typeof value === 'string' && WORKSPACE_TYPES.includes(value as WorkspaceType)
 }
 
-export interface Automation {
-  id: string
-  name: string
-  projectId: string
-  prompt: string
-  cronExpression: string
-  enabled: boolean
-  createdAt: number
-  lastRunAt?: number
-  lastRunStatus?: 'success' | 'failed' | 'timeout'
-}
-
 export interface Project {
   id: string
   name: string
@@ -48,7 +36,6 @@ export interface Workspace {
   worktreePath: string
   projectId: string
   agentPermissionMode: AgentPermissionMode
-  automationId?: string
   memory?: string
 }
 
@@ -68,7 +55,7 @@ export type Tab = {
   | { type: 'diff' }
 )
 
-export type RightPanelMode = 'files' | 'changes' | 'memory' | 'preview'
+export type RightPanelMode = 'files' | 'changes' | 'memory'
 
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 
@@ -136,7 +123,6 @@ export interface AppState {
   projects: Project[]
   workspaces: Workspace[]
   tabs: Tab[]
-  automations: Automation[]
   activeWorkspaceId: string | null
   activeTabId: string | null
   lastActiveTabByWorkspace: Record<string, string>
@@ -147,7 +133,6 @@ export interface AppState {
   workspaceDialogProjectId: string | null
   settings: Settings
   settingsOpen: boolean
-  automationsOpen: boolean
   confirmDialog: ConfirmDialogState | null
   toasts: Toast[]
   quickOpenVisible: boolean
@@ -160,7 +145,6 @@ export interface AppState {
   prStatusMap: Map<string, PrInfo | null>
   ghAvailability: Map<string, boolean>
   ghErrorMap: Map<string, GithubLookupError | undefined>
-  previewUrlByWorkspace: Record<string, string>
 
   // Actions
   addProject: (project: Project) => void
@@ -197,7 +181,6 @@ export interface AppState {
   deleteProject: (projectId: string) => Promise<void>
   updateSettings: (partial: Partial<Settings>) => void
   toggleSettings: () => void
-  toggleAutomations: () => void
   showConfirmDialog: (dialog: ConfirmDialogState) => void
   dismissConfirmDialog: () => void
   addToast: (toast: Toast) => void
@@ -207,7 +190,6 @@ export interface AppState {
   toggleCommandPalette: () => void
   openCommandPalette: () => void
   closeCommandPalette: () => void
-  setPreviewUrl: (workspaceId: string, url: string) => void
 
   // Unread indicator actions
   markWorkspaceUnread: (workspaceId: string) => void
@@ -221,11 +203,6 @@ export interface AppState {
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void
   setGhAvailability: (projectId: string, available: boolean, error?: GithubLookupError) => void
 
-  // Automation actions
-  addAutomation: (automation: Automation) => void
-  updateAutomation: (id: string, partial: Partial<Omit<Automation, 'id'>>) => void
-  removeAutomation: (id: string) => void
-
   // Hydration
   hydrateState: (data: PersistedState) => void
 
@@ -238,10 +215,8 @@ export interface PersistedState {
   projects: Project[]
   workspaces: Workspace[]
   tabs?: Tab[]
-  automations?: Automation[]
   activeWorkspaceId?: string | null
   activeTabId?: string | null
   lastActiveTabByWorkspace?: Record<string, string>
   settings?: Settings
-  previewUrlByWorkspace?: Record<string, string>
 }

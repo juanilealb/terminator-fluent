@@ -13,20 +13,18 @@ A Windows desktop app for running multiple AI coding agents in parallel. Each ag
 - **Monaco code editor** â€” Syntax highlighting, diffs, and file editing
 - **Git integration** â€” Staging, committing, branching, and worktree management
 - **File tree navigation** â€” Browse project files with git status indicators
-- **Cron-based automation** â€” Schedule recurring agent tasks
 - **Hook integration** â€” Claude Code and Codex activity/notification hooks (unread indicators, activity spinners)
 - **Keyboard-driven** â€” Quick Open, tab switching, and full shortcut support
 - **Command palette** â€” Fuzzy command runner plus slash commands
 - **Workspace memory** â€” Persistent notes and reusable prompt context per workspace
 - **Prompt templates** â€” Mention-aware templates (`@workspace`, `@branch`, `@file:...`, etc.)
 - **Snapshots** â€” Workspace checkpoints backed by git stash metadata
-- **Local preview** â€” Built-in localhost iframe preview panel
 
 ---
 
 ## Full Usage Guide
 
-For full app usage with all current features (command palette, workspace memory, prompt templates, local preview, snapshots, and quick terminal startup), see:
+For full app usage with all current features (command palette, workspace memory, prompt templates, snapshots, and quick terminal startup), see:
 
 - `desktop/USAGE.md`
 

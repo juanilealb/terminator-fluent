@@ -5,7 +5,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useAppStore } from '../../store/app-store'
 import type { Tab } from '../../store/types'
 import { dispatchTerminalUiAction, type TerminalUiAction } from '../../utils/terminal-actions'
-import { expandPromptTemplate, normalizePreviewUrl } from '../../utils/prompt-template'
+import { expandPromptTemplate } from '../../utils/prompt-template'
 import styles from './CommandPalette.module.css'
 
 interface CommandAction {
@@ -53,12 +53,11 @@ export function CommandPalette() {
     toggleQuickOpen,
     addToast,
     closeCommandPalette,
-    setPreviewUrl,
   } = useAppStore()
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
 
-  const ensureRightPanelMode = (mode: 'files' | 'changes' | 'memory' | 'preview') => {
+  const ensureRightPanelMode = (mode: 'files' | 'changes' | 'memory') => {
     setRightPanelMode(mode)
     if (!rightPanelOpen) toggleRightPanel()
   }
@@ -223,15 +222,6 @@ export function CommandPalette() {
         shortcut: '/memory',
         run: () => ensureRightPanelMode('memory'),
       },
-      {
-        id: 'panel-preview',
-        title: 'Show preview panel',
-        description: 'Open local preview panel',
-        keywords: ['preview', '/preview'],
-        category: 'Panels',
-        shortcut: '/preview',
-        run: () => ensureRightPanelMode('preview'),
-      },
     ]
 
     if (workspace) {
@@ -350,24 +340,6 @@ export function CommandPalette() {
       ensureRightPanelMode('memory')
       return true
     }
-    if (command === 'preview') {
-      ensureRightPanelMode('preview')
-      return true
-    }
-    if (command === 'preview-url') {
-      if (!workspace) {
-        addToast({ id: crypto.randomUUID(), message: 'Select a workspace first', type: 'info' })
-        return true
-      }
-      const normalized = normalizePreviewUrl(arg)
-      if (!normalized) {
-        addToast({ id: crypto.randomUUID(), message: 'Usage: /preview-url 3000', type: 'info' })
-        return true
-      }
-      setPreviewUrl(workspace.id, normalized)
-      ensureRightPanelMode('preview')
-      return true
-    }
     if (command === 'snapshot') {
       if (!workspace) {
         addToast({ id: crypto.randomUUID(), message: 'Select a workspace first', type: 'info' })
@@ -410,11 +382,11 @@ export function CommandPalette() {
       return true
     }
     if (command === 'help') {
-      addToast({
-        id: crypto.randomUUID(),
-        message: 'Slash commands: /terminal /terminal-find /terminal-clear /files /changes /memory /preview /preview-url /snapshot /restore-latest /template',
-        type: 'info',
-      })
+        addToast({
+          id: crypto.randomUUID(),
+          message: 'Slash commands: /terminal /terminal-find /terminal-clear /files /changes /memory /snapshot /restore-latest /template',
+          type: 'info',
+        })
       return true
     }
 

@@ -282,7 +282,7 @@ function normalizePtyEnv(extraEnv?: Record<string, string>): Record<string, stri
   return normalized
 }
 
-const ACTIVITY_DIR = join(getTempDir(), 'terminator-activity')
+const ACTIVITY_DIR = join(getTempDir(), 'terminator-fluent-activity')
 const CODEX_MARKER_SEGMENT = '.codex.'
 const CODEX_WAITING_MARKER_SEGMENT = '.codex-wait.'
 const PROCESS_SNAPSHOT_TTL_MS = 1000

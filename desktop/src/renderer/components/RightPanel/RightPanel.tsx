@@ -13,10 +13,9 @@ import { subscribeGitStatusChanged } from '../../utils/git-status-events'
 import { FileTree } from './FileTree'
 import { ChangedFiles } from './ChangedFiles'
 import { WorkspaceMemoryPanel } from './WorkspaceMemoryPanel'
-import { PreviewPanel } from './PreviewPanel'
 import styles from './RightPanel.module.css'
 
-type PanelMode = 'files' | 'changes' | 'memory' | 'preview'
+type PanelMode = 'files' | 'changes' | 'memory'
 
 export function RightPanel() {
   const {
@@ -24,15 +23,12 @@ export function RightPanel() {
     setRightPanelMode,
     activeWorkspaceId,
     workspaces,
-    previewUrlByWorkspace,
-    setPreviewUrl,
   } = useAppStore()
   const [changeCount, setChangeCount] = useState(0)
   const countSeqRef = useRef(0)
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
   const worktreePath = workspace?.worktreePath
-  const previewUrl = workspace ? (previewUrlByWorkspace[workspace.id] ?? '') : ''
 
   const refreshChangeCount = useCallback(async () => {
     if (!worktreePath) {
@@ -121,12 +117,6 @@ export function RightPanel() {
           >
             Memory
           </Tab>
-          <Tab
-            value="preview"
-            title={`Preview (${formatShortcut(SHORTCUT_MAP.previewPanel.mac, SHORTCUT_MAP.previewPanel.win)})`}
-          >
-            Preview
-          </Tab>
         </TabList>
       </div>
 
@@ -135,7 +125,7 @@ export function RightPanel() {
           <div className={styles.emptyState}>
             <span className={styles.emptyIcon}>[ ]</span>
             <span className={styles.emptyText}>
-              Select a workspace to browse files, snapshots, and preview
+              Select a workspace to browse files and snapshots
             </span>
           </div>
         ) : (
@@ -152,12 +142,6 @@ export function RightPanel() {
             </div>
             <div style={{ display: rightPanelMode === 'memory' ? 'contents' : 'none' }}>
               <WorkspaceMemoryPanel workspace={workspace} />
-            </div>
-            <div style={{ display: rightPanelMode === 'preview' ? 'contents' : 'none' }}>
-              <PreviewPanel
-                previewUrl={previewUrl}
-                onChangeUrl={(url) => setPreviewUrl(workspace.id, url)}
-              />
             </div>
           </>
         )}
