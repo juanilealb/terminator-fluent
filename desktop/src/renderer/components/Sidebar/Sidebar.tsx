@@ -343,6 +343,7 @@ export function Sidebar() {
   const unreadWorkspaceIds = useAppStore((s) => s.unreadWorkspaceIds);
   const activeClaudeWorkspaceIds = useAppStore((s) => s.activeClaudeWorkspaceIds);
   const waitingClaudeWorkspaceIds = useAppStore((s) => s.waitingClaudeWorkspaceIds);
+  const completedClaudeWorkspaceIds = useAppStore((s) => s.completedClaudeWorkspaceIds);
   const renameWorkspace = useAppStore((s) => s.renameWorkspace);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const setPrStatuses = useAppStore((s) => s.setPrStatuses);
@@ -962,13 +963,14 @@ export function Sidebar() {
                     const isRunning = activeClaudeWorkspaceIds.has(ws.id);
                     const isWaiting = !isRunning && waitingClaudeWorkspaceIds.has(ws.id);
                     const isUnread = !isRunning && !isWaiting && unreadWorkspaceIds.has(ws.id);
+                    const isCompleted = !isRunning && !isWaiting && !isUnread && completedClaudeWorkspaceIds.has(ws.id);
 
                     return (
                       <div
                         key={ws.id}
                         className={`${styles.workspaceItem} ${
                           ws.id === activeWorkspaceId ? styles.active : ""
-                        } ${isUnread ? styles.unread : ""} ${isRunning ? styles.claudeActive : ""} ${isWaiting ? styles.waitingInput : ""}`}
+                        } ${isUnread ? styles.unread : ""} ${isRunning ? styles.claudeActive : ""} ${isWaiting ? styles.waitingInput : ""} ${isCompleted ? styles.completed : ""}`}
                         onClick={() =>
                           !isEditing && handleSelectWorkspace(ws.id)
                         }

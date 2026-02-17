@@ -135,6 +135,16 @@
   box-shadow: 0 0 4px rgba(72, 209, 138, 0.35);
 }
 
+.dotWaiting {
+  background: var(--accent-yellow);
+  box-shadow: 0 0 4px rgba(227, 181, 106, 0.35);
+}
+
+.dotCompleted {
+  background: var(--accent-blue);
+  box-shadow: 0 0 4px rgba(88, 171, 255, 0.35);
+}
+
 .dotIdle {
   background: #555;
   box-shadow: none;

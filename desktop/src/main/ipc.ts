@@ -1,9 +1,10 @@
 import { ipcMain, dialog, app, BrowserWindow, clipboard } from 'electron'
-import { join, relative } from 'path'
+import { basename, join, relative } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { watch, type FSWatcher } from 'fs'
+import { pathToFileURL } from 'url'
 import { IPC } from '../shared/ipc-channels'
 import type { ThemePreference } from '../shared/ipc-channels'
 import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
@@ -16,6 +17,7 @@ import { trustPathForClaude, loadClaudeSettings, saveClaudeSettings, loadJsonFil
 import { loadCodexConfigText, saveCodexConfigText } from './codex-config'
 
 const ptyManager = new PtyManager()
+const EDITOR_LAUNCH_GRACE_MS = 650
 
 // Filesystem watchers: dirPath → { watcher, debounceTimer }
 const fsWatchers = new Map<string, { watcher: FSWatcher; timer: ReturnType<typeof setTimeout> | null }>()
@@ -560,6 +562,183 @@ export function registerIpcHandlers(options: IpcHandlerOptions = {}): void {
     const win = BrowserWindow.fromWebContents(_e.sender)
     if (!win) return false
     return win.isMaximized()
+  })
+
+  type EditorKind = 'vscode' | 'cursor'
+
+  type LaunchAttempt =
+    | { kind: 'direct'; command: string; args: string[] }
+    | { kind: 'cmd'; command: string; args: string[] }
+
+  function pushIfExists(target: LaunchAttempt[], filePath: string, args: string[]): void {
+    if (existsSync(filePath)) {
+      target.push({ kind: 'direct', command: filePath, args })
+    }
+  }
+
+  function pushCommandVariants(target: LaunchAttempt[], filePath: string, dirPath: string): void {
+    pushIfExists(target, filePath, ['-n', dirPath])
+    pushIfExists(target, filePath, [dirPath])
+  }
+
+  function toFolderUri(dirPath: string): string {
+    return pathToFileURL(dirPath).toString()
+  }
+
+  function pushScriptCommandVariants(target: LaunchAttempt[], filePath: string, dirPath: string): void {
+    if (!existsSync(filePath)) return
+    const folderUri = toFolderUri(dirPath)
+    target.push({ kind: 'cmd', command: filePath, args: ['-n', dirPath] })
+    target.push({ kind: 'cmd', command: filePath, args: ['--new-window', dirPath] })
+    target.push({ kind: 'cmd', command: filePath, args: ['--folder-uri', folderUri] })
+    target.push({ kind: 'cmd', command: filePath, args: [dirPath] })
+  }
+
+  function pushCliAttempts(target: LaunchAttempt[], commandName: string, dirPath: string): void {
+    const folderUri = toFolderUri(dirPath)
+    target.push({ kind: 'cmd', command: commandName, args: ['-n', dirPath] })
+    target.push({ kind: 'cmd', command: commandName, args: ['--new-window', dirPath] })
+    target.push({ kind: 'cmd', command: commandName, args: ['--folder-uri', folderUri] })
+    target.push({ kind: 'cmd', command: commandName, args: [dirPath] })
+  }
+
+  function pushVSCodeCommandVariants(target: LaunchAttempt[], filePath: string, dirPath: string): void {
+    const folderUri = toFolderUri(dirPath)
+    pushIfExists(target, filePath, ['--new-window', dirPath])
+    pushIfExists(target, filePath, ['--folder-uri', folderUri])
+    pushIfExists(target, filePath, ['-n', dirPath])
+    pushIfExists(target, filePath, [dirPath])
+  }
+
+  function buildEditorLaunchAttempts(editor: EditorKind, dirPath: string): LaunchAttempt[] {
+    const attempts: LaunchAttempt[] = []
+    const localAppData = process.env.LOCALAPPDATA ?? join(process.env.USERPROFILE ?? '', 'AppData', 'Local')
+    const programFiles = process.env.ProgramFiles ?? ''
+    const programFilesX86 = process.env['ProgramFiles(x86)'] ?? ''
+    if (process.platform === 'win32') {
+      if (editor === 'vscode') {
+        // Prefer CLI variants first: they report exits reliably on Windows.
+        pushScriptCommandVariants(attempts, `${localAppData}\\Programs\\Microsoft VS Code\\bin\\code.cmd`, dirPath)
+        pushScriptCommandVariants(attempts, `${programFiles}\\Microsoft VS Code\\bin\\code.cmd`, dirPath)
+        pushScriptCommandVariants(attempts, `${programFilesX86}\\Microsoft VS Code\\bin\\code.cmd`, dirPath)
+        pushScriptCommandVariants(attempts, `${localAppData}\\Programs\\Microsoft VS Code Insiders\\bin\\code-insiders.cmd`, dirPath)
+        pushCliAttempts(attempts, 'code', dirPath)
+        pushCliAttempts(attempts, 'code-insiders', dirPath)
+        pushCliAttempts(attempts, 'codium', dirPath)
+        pushVSCodeCommandVariants(attempts, `${localAppData}\\Programs\\Microsoft VS Code\\Code.exe`, dirPath)
+        pushVSCodeCommandVariants(attempts, `${programFiles}\\Microsoft VS Code\\Code.exe`, dirPath)
+        pushVSCodeCommandVariants(attempts, `${programFilesX86}\\Microsoft VS Code\\Code.exe`, dirPath)
+        pushVSCodeCommandVariants(attempts, `${localAppData}\\Programs\\Microsoft VS Code Insiders\\Code - Insiders.exe`, dirPath)
+        pushVSCodeCommandVariants(attempts, `${programFiles}\\Microsoft VS Code Insiders\\Code - Insiders.exe`, dirPath)
+        pushVSCodeCommandVariants(attempts, `${programFilesX86}\\Microsoft VS Code Insiders\\Code - Insiders.exe`, dirPath)
+      } else {
+        pushCommandVariants(attempts, `${localAppData}\\Programs\\Cursor\\Cursor.exe`, dirPath)
+        pushCommandVariants(attempts, `${programFiles}\\Cursor\\Cursor.exe`, dirPath)
+        pushCommandVariants(attempts, `${programFilesX86}\\Cursor\\Cursor.exe`, dirPath)
+        pushScriptCommandVariants(attempts, `${localAppData}\\Programs\\Cursor\\resources\\app\\bin\\cursor.cmd`, dirPath)
+        pushScriptCommandVariants(attempts, `${programFiles}\\Cursor\\resources\\app\\bin\\cursor.cmd`, dirPath)
+        pushScriptCommandVariants(attempts, `${programFilesX86}\\Cursor\\resources\\app\\bin\\cursor.cmd`, dirPath)
+        pushCliAttempts(attempts, 'cursor', dirPath)
+      }
+      return attempts
+    }
+
+    const cmdName = editor === 'vscode' ? 'code' : 'cursor'
+    attempts.push({ kind: 'direct', command: cmdName, args: ['-n', dirPath] })
+    return attempts
+  }
+
+  function describeAttempt(attempt: LaunchAttempt): string {
+    return basename(attempt.command)
+  }
+
+  function launchErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) return error.message
+    return 'launch failed'
+  }
+
+  async function runLaunchAttempt(attempt: LaunchAttempt, cwdPath: string): Promise<{ ok: boolean; error?: string }> {
+    const { spawn } = await import('child_process')
+    const commonOptions = {
+      detached: true,
+      stdio: 'ignore' as const,
+      windowsHide: true,
+      cwd: cwdPath,
+    }
+
+    if (attempt.kind === 'cmd') {
+      return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+        const child = spawn('cmd.exe', ['/d', '/c', attempt.command, ...attempt.args], commonOptions)
+        child.once('error', (error) => resolve({ ok: false, error: launchErrorMessage(error) }))
+        child.once('close', (code) => {
+          if (code === 0) resolve({ ok: true })
+          else resolve({ ok: false, error: `exit ${code ?? 'null'}` })
+        })
+        child.once('spawn', () => child.unref())
+      })
+    }
+
+    return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      let settled = false
+      let closeTimer: NodeJS.Timeout | null = null
+      const finish = (result: { ok: boolean; error?: string }) => {
+        if (settled) return
+        settled = true
+        if (closeTimer) clearTimeout(closeTimer)
+        resolve(result)
+      }
+      const child = spawn(attempt.command, attempt.args, commonOptions)
+      child.once('error', (error) => finish({ ok: false, error: launchErrorMessage(error) }))
+      child.once('spawn', () => {
+        child.unref()
+        closeTimer = setTimeout(() => finish({ ok: true }), EDITOR_LAUNCH_GRACE_MS)
+      })
+      child.once('close', (code) => {
+        if (code === 0) finish({ ok: true })
+        else finish({ ok: false, error: `exit ${code ?? 'null'}` })
+      })
+    })
+  }
+
+  async function openInEditor(editor: EditorKind, dirPath: string): Promise<{ ok: boolean; error?: string }> {
+    if (typeof dirPath !== 'string' || !dirPath.trim()) {
+      return { ok: false, error: 'No folder selected' }
+    }
+    if (!existsSync(dirPath)) {
+      return { ok: false, error: 'Folder does not exist' }
+    }
+
+    const attempts = buildEditorLaunchAttempts(editor, dirPath)
+    const failureHints: string[] = []
+    for (const attempt of attempts) {
+      const launched = await runLaunchAttempt(attempt, dirPath)
+      if (launched.ok) return { ok: true }
+      if (launched.error) {
+        failureHints.push(`${describeAttempt(attempt)}: ${launched.error}`)
+      }
+    }
+
+    const debugHint = failureHints.length > 0
+      ? ` Last attempt: ${failureHints[failureHints.length - 1]}.`
+      : ''
+    if (editor === 'vscode') {
+      return {
+        ok: false,
+        error: `Could not open VS Code. Install the "code" command in PATH or reinstall VS Code with CLI support.${debugHint}`,
+      }
+    }
+    return {
+      ok: false,
+      error: `Could not open Cursor. Install the "cursor" command in PATH from Cursor Command Palette.${debugHint}`,
+    }
+  }
+
+  ipcMain.handle(IPC.APP_OPEN_IN_VSCODE, async (_e, dirPath: string) => {
+    return openInEditor('vscode', dirPath)
+  })
+
+  ipcMain.handle(IPC.APP_OPEN_IN_CURSOR, async (_e, dirPath: string) => {
+    return openInEditor('cursor', dirPath)
   })
 
   // ── Claude Code trust ──

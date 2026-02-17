@@ -122,7 +122,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface Toast {
   id: string
   message: string
-  type: 'error' | 'info'
+  type: 'error' | 'info' | 'success'
 }
 
 export interface ConfirmDialogState {
@@ -155,6 +155,7 @@ export interface AppState {
   unreadWorkspaceIds: Set<string>
   activeClaudeWorkspaceIds: Set<string>
   waitingClaudeWorkspaceIds: Set<string>
+  completedClaudeWorkspaceIds: Set<string>
   runningAgentCount: number
   waitingAgentCount: number
   prStatusMap: Map<string, PrInfo | null>
@@ -213,6 +214,7 @@ export interface AppState {
   // Agent activity actions (Claude + Codex)
   setActiveClaudeWorkspaces: (workspaceIds: string[]) => void
   setClaudeActivitySnapshot: (snapshot: AgentActivitySnapshot) => void
+  setWorkspaceAgentStatus: (workspaceId: string, status: 'running' | 'waiting' | 'completed' | 'idle') => void
 
   // PR status actions
   setPrStatuses: (projectId: string, statuses: Record<string, PrInfo | null>) => void

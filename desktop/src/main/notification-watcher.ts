@@ -1,13 +1,16 @@
-import { mkdirSync, readdirSync, readFileSync, unlinkSync } from 'fs'
+import { mkdirSync, readdirSync, readFileSync, unlinkSync, watch, type FSWatcher } from 'fs'
 import { join } from 'path'
 import { app, BrowserWindow, nativeImage, Notification } from 'electron'
+import { randomUUID } from 'crypto'
 import { IPC, type AgentActivitySnapshot, type AgentNotifyReason } from '../shared/ipc-channels'
 import { debugLog, getTempDir } from '@shared/platform'
 import { sendActivateWorkspace } from './ipc'
 
 const NOTIFY_DIR = join(getTempDir(), 'terminator-fluent-notify')
 const ACTIVITY_DIR = join(getTempDir(), 'terminator-fluent-activity')
-const POLL_INTERVAL = 500
+const RESYNC_INTERVAL_MS = 5_000
+const NOTIFY_DEBOUNCE_MS = 60
+const ACTIVITY_DEBOUNCE_MS = 90
 const CLAUDE_MARKER_SUFFIX = '.claude'
 const CODEX_MARKER_SEGMENT = '.codex.'
 const CODEX_WAITING_MARKER_SEGMENT = '.codex-wait.'
@@ -33,7 +36,11 @@ function getNotificationIcon() {
 }
 
 export class NotificationWatcher {
-  private timer: ReturnType<typeof setInterval> | null = null
+  private resyncTimer: ReturnType<typeof setInterval> | null = null
+  private notifyWatcher: FSWatcher | null = null
+  private activityWatcher: FSWatcher | null = null
+  private notifyDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private activityDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private prevSnapshot: AgentActivitySnapshot = this.emptySnapshot()
   private lastNotifiedAtByKey = new Map<string, number>()
 
@@ -41,23 +48,72 @@ export class NotificationWatcher {
     mkdirSync(NOTIFY_DIR, { recursive: true })
     mkdirSync(ACTIVITY_DIR, { recursive: true })
     this.cleanupStartupActivityMarkers()
-    this.pollOnce()
-    this.timer = setInterval(() => this.pollOnce(), POLL_INTERVAL)
+    this.processNotifications()
+    this.processActivity()
+    this.watchDirs()
+    this.resyncTimer = setInterval(() => {
+      this.processNotifications()
+      this.processActivity()
+    }, RESYNC_INTERVAL_MS)
   }
 
   stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer)
-      this.timer = null
+    if (this.resyncTimer) {
+      clearInterval(this.resyncTimer)
+      this.resyncTimer = null
+    }
+    if (this.notifyDebounceTimer) {
+      clearTimeout(this.notifyDebounceTimer)
+      this.notifyDebounceTimer = null
+    }
+    if (this.activityDebounceTimer) {
+      clearTimeout(this.activityDebounceTimer)
+      this.activityDebounceTimer = null
+    }
+    if (this.notifyWatcher) {
+      this.notifyWatcher.close()
+      this.notifyWatcher = null
+    }
+    if (this.activityWatcher) {
+      this.activityWatcher.close()
+      this.activityWatcher = null
     }
   }
 
-  private pollOnce(): void {
-    this.pollNotifications()
-    this.pollActivity()
+  private watchDirs(): void {
+    this.notifyWatcher = this.createWatcher(NOTIFY_DIR, () => this.scheduleNotificationScan())
+    this.activityWatcher = this.createWatcher(ACTIVITY_DIR, () => this.scheduleActivityScan())
   }
 
-  private pollNotifications(): void {
+  private createWatcher(dir: string, onEvent: () => void): FSWatcher | null {
+    try {
+      return watch(dir, () => onEvent())
+    } catch (error) {
+      debugLog('Failed to watch marker directory; using periodic resync only', {
+        dir,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  private scheduleNotificationScan(): void {
+    if (this.notifyDebounceTimer) return
+    this.notifyDebounceTimer = setTimeout(() => {
+      this.notifyDebounceTimer = null
+      this.processNotifications()
+    }, NOTIFY_DEBOUNCE_MS)
+  }
+
+  private scheduleActivityScan(): void {
+    if (this.activityDebounceTimer) return
+    this.activityDebounceTimer = setTimeout(() => {
+      this.activityDebounceTimer = null
+      this.processActivity()
+    }, ACTIVITY_DEBOUNCE_MS)
+  }
+
+  private processNotifications(): void {
     try {
       const files = readdirSync(NOTIFY_DIR)
       for (const f of files) {
@@ -68,7 +124,7 @@ export class NotificationWatcher {
     }
   }
 
-  private pollActivity(): void {
+  private processActivity(): void {
     try {
       const files = readdirSync(ACTIVITY_DIR)
       const snapshot = this.buildSnapshot(files)
@@ -133,8 +189,7 @@ export class NotificationWatcher {
       return workspaceId ? { workspaceId, kind: 'codex_running' } : null
     }
 
-    // Legacy format is no longer written. Ignore and clean it up to avoid
-    // stale always-active spinners after upgrading marker formats.
+    // Legacy format is no longer written. Ignore and clean it up to avoid stale markers.
     return null
   }
 
@@ -254,21 +309,32 @@ export class NotificationWatcher {
     if ((now - prevNotifyAt) < 10_000) return
     this.lastNotifiedAtByKey.set(dedupeKey, now)
 
-    this.showNotification(workspaceId, reason)
+    const workspaceLabel = workspaceId
+    const event = {
+      notifyId: randomUUID(),
+      ts: now,
+      workspaceId,
+      workspaceLabel,
+      reason,
+      source: 'hook' as const,
+    }
+
+    this.showNotification(workspaceId, reason, workspaceLabel)
 
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) {
-        win.webContents.send(IPC.CLAUDE_NOTIFY_WORKSPACE, { workspaceId, reason })
+        win.webContents.send(IPC.CLAUDE_NOTIFY_WORKSPACE, event)
       }
     }
   }
 
-  private showNotification(workspaceId: string, reason: AgentNotifyReason): void {
+  private showNotification(workspaceId: string, reason: AgentNotifyReason, workspaceLabel?: string): void {
     if (!Notification.isSupported()) return
 
+    const label = workspaceLabel ?? workspaceId
     const body = reason === 'waiting_input'
-      ? `Agent waiting for your input in workspace ${workspaceId}`
-      : `Agent completed in workspace ${workspaceId}`
+      ? `Agent waiting for your input in workspace ${label}`
+      : `Agent completed in workspace ${label}`
 
     const notification = new Notification({
       title: 'Terminator Fluent',

@@ -8,8 +8,12 @@ export interface ThemeChangedPayload {
 export type AgentNotifyReason = 'completed' | 'waiting_input'
 
 export interface AgentNotifyEvent {
+  notifyId?: string
+  ts?: number
   workspaceId: string
+  workspaceLabel?: string
   reason: AgentNotifyReason
+  source?: 'hook' | 'pty'
 }
 
 export interface AgentActivitySnapshot {
@@ -77,6 +81,8 @@ export const IPC = {
   APP_WINDOW_CLOSE: 'app:window-close',
   APP_WINDOW_IS_MAXIMIZED: 'app:window-is-maximized',
   APP_WINDOW_MAXIMIZED_CHANGED: 'app:window-maximized-changed',
+  APP_OPEN_IN_VSCODE: 'app:open-in-vscode',
+  APP_OPEN_IN_CURSOR: 'app:open-in-cursor',
   ACTIVATE_WORKSPACE: 'app:activate-workspace',
   THEME_CHANGED: 'theme:changed',
 

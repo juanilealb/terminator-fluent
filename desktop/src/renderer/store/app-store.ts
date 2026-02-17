@@ -105,6 +105,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   unreadWorkspaceIds: new Set<string>(),
   activeClaudeWorkspaceIds: new Set<string>(),
   waitingClaudeWorkspaceIds: new Set<string>(),
+  completedClaudeWorkspaceIds: new Set<string>(),
   runningAgentCount: 0,
   waitingAgentCount: 0,
   prStatusMap: new Map(),
@@ -136,6 +137,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const waitingClaudeWorkspaceIds = new Set(
         Array.from(s.waitingClaudeWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)),
       )
+      const completedClaudeWorkspaceIds = new Set(
+        Array.from(s.completedClaudeWorkspaceIds).filter((wsId) => !removedWsIds.has(wsId)),
+      )
       for (const wsId of removedWsIds) delete tabMap[wsId]
       return {
         projects: s.projects.filter((p) => p.id !== id),
@@ -143,6 +147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         unreadWorkspaceIds,
         activeClaudeWorkspaceIds,
         waitingClaudeWorkspaceIds,
+        completedClaudeWorkspaceIds,
         runningAgentCount: activeClaudeWorkspaceIds.size,
         waitingAgentCount: waitingClaudeWorkspaceIds.size,
         lastActiveTabByWorkspace: tabMap,
@@ -162,9 +167,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newUnread = new Set(s.unreadWorkspaceIds)
       const newActiveClaude = new Set(s.activeClaudeWorkspaceIds)
       const newWaitingClaude = new Set(s.waitingClaudeWorkspaceIds)
+      const newCompletedClaude = new Set(s.completedClaudeWorkspaceIds)
       newUnread.delete(id)
       newActiveClaude.delete(id)
       newWaitingClaude.delete(id)
+      newCompletedClaude.delete(id)
       const tabMap = { ...s.lastActiveTabByWorkspace }
       delete tabMap[id]
       return {
@@ -173,6 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         unreadWorkspaceIds: newUnread,
         activeClaudeWorkspaceIds: newActiveClaude,
         waitingClaudeWorkspaceIds: newWaitingClaude,
+        completedClaudeWorkspaceIds: newCompletedClaude,
         runningAgentCount: newActiveClaude.size,
         waitingAgentCount: newWaitingClaude.size,
         lastActiveTabByWorkspace: tabMap,
@@ -212,7 +220,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const wsTabs = s.tabs.filter((t) => t.workspaceId === id)
       const newUnread = new Set(s.unreadWorkspaceIds)
+      const newCompleted = new Set(s.completedClaudeWorkspaceIds)
       if (id) newUnread.delete(id)
+      if (id) newCompleted.delete(id)
 
       // Restore remembered tab, falling back to first tab
       const remembered = id ? tabMap[id] : null
@@ -225,6 +235,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         activeTabId,
         lastActiveTabByWorkspace: tabMap,
         unreadWorkspaceIds: newUnread,
+        completedClaudeWorkspaceIds: newCompleted,
       }
     }),
 
@@ -657,20 +668,48 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeClaudeWorkspaceIds: new Set(workspaceIds),
       runningAgentCount: workspaceIds.length,
       waitingClaudeWorkspaceIds: new Set(),
+      completedClaudeWorkspaceIds: new Set(),
       waitingAgentCount: 0,
     })),
 
   setClaudeActivitySnapshot: (snapshot) =>
-    set(() => {
+    set((s) => {
       const waitingAgentCount = Object.values(snapshot.waitingAgentsByWorkspace).reduce(
         (sum, count) => sum + count,
         0,
       )
+      const completed = new Set(s.completedClaudeWorkspaceIds)
+      for (const workspaceId of snapshot.runningWorkspaceIds) completed.delete(workspaceId)
+      for (const workspaceId of snapshot.waitingWorkspaceIds) completed.delete(workspaceId)
       return {
         activeClaudeWorkspaceIds: new Set(snapshot.runningWorkspaceIds),
         waitingClaudeWorkspaceIds: new Set(snapshot.waitingWorkspaceIds),
+        completedClaudeWorkspaceIds: completed,
         runningAgentCount: snapshot.runningAgentCount,
         waitingAgentCount,
+      }
+    }),
+
+  setWorkspaceAgentStatus: (workspaceId, status) =>
+    set((s) => {
+      const running = new Set(s.activeClaudeWorkspaceIds)
+      const waiting = new Set(s.waitingClaudeWorkspaceIds)
+      const completed = new Set(s.completedClaudeWorkspaceIds)
+
+      running.delete(workspaceId)
+      waiting.delete(workspaceId)
+      completed.delete(workspaceId)
+
+      if (status === 'running') running.add(workspaceId)
+      if (status === 'waiting') waiting.add(workspaceId)
+      if (status === 'completed') completed.add(workspaceId)
+
+      return {
+        activeClaudeWorkspaceIds: running,
+        waitingClaudeWorkspaceIds: waiting,
+        completedClaudeWorkspaceIds: completed,
+        runningAgentCount: running.size,
+        waitingAgentCount: waiting.size,
       }
     }),
 

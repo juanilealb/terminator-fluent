@@ -594,7 +594,8 @@
 /* Status indicator states — hide the icon to show the status overlay */
 .workspaceItem.unread .workspaceIcon,
 .workspaceItem.claudeActive .workspaceIcon,
-.workspaceItem.waitingInput .workspaceIcon {
+.workspaceItem.waitingInput .workspaceIcon,
+.workspaceItem.completed .workspaceIcon {
   visibility: hidden;
 }
 
@@ -640,6 +641,20 @@
   border-radius: 50%;
   background: var(--colorPaletteDarkOrangeForeground1);
   box-shadow: 0 0 8px var(--colorPaletteDarkOrangeBackground2);
+}
+
+/* Completed indicator */
+.workspaceItem.completed::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--colorBrandBackground);
+  box-shadow: 0 0 8px var(--colorBrandBackground2);
 }
 
 @keyframes spin {

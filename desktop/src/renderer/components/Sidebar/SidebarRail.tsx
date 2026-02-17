@@ -16,6 +16,7 @@ interface WorkspaceWithState {
   isRunning: boolean
   isWaiting: boolean
   isUnread: boolean
+  isCompleted: boolean
 }
 
 interface AddProjectDraft {
@@ -29,6 +30,7 @@ export function SidebarRail() {
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
   const activeClaudeWorkspaceIds = useAppStore((s) => s.activeClaudeWorkspaceIds)
   const waitingClaudeWorkspaceIds = useAppStore((s) => s.waitingClaudeWorkspaceIds)
+  const completedClaudeWorkspaceIds = useAppStore((s) => s.completedClaudeWorkspaceIds)
   const unreadWorkspaceIds = useAppStore((s) => s.unreadWorkspaceIds)
   const setActiveWorkspace = useAppStore((s) => s.setActiveWorkspace)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
@@ -47,6 +49,7 @@ export function SidebarRail() {
           const isRunning = activeClaudeWorkspaceIds.has(workspace.id)
           const isWaiting = !isRunning && waitingClaudeWorkspaceIds.has(workspace.id)
           const isUnread = !isRunning && !isWaiting && unreadWorkspaceIds.has(workspace.id)
+          const isCompleted = !isRunning && !isWaiting && !isUnread && completedClaudeWorkspaceIds.has(workspace.id)
           return {
             id: workspace.id,
             name: workspace.name,
@@ -56,6 +59,7 @@ export function SidebarRail() {
             isRunning,
             isWaiting,
             isUnread,
+            isCompleted,
           }
         }),
     )
@@ -65,6 +69,7 @@ export function SidebarRail() {
     activeWorkspaceId,
     activeClaudeWorkspaceIds,
     waitingClaudeWorkspaceIds,
+    completedClaudeWorkspaceIds,
     unreadWorkspaceIds,
   ])
 
@@ -126,7 +131,9 @@ export function SidebarRail() {
                 ? styles.waiting
                 : workspace.isUnread
                   ? styles.unread
-                  : ''
+                  : workspace.isCompleted
+                    ? styles.completed
+                    : ''
             const hasProjectDivider =
               index > 0 && ordered[index - 1]?.projectId !== workspace.projectId
 

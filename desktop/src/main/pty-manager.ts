@@ -1,5 +1,6 @@
 import * as pty from 'node-pty'
 import { execFile } from 'child_process'
+import { randomUUID } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { WebContents } from 'electron'
@@ -713,8 +714,11 @@ export class PtyManager {
     this.markCodexWorkspaceWaiting(instance.workspaceId, instance.process.pid)
     if (!instance.webContents.isDestroyed()) {
       instance.webContents.send(IPC.CLAUDE_NOTIFY_WORKSPACE, {
+        notifyId: randomUUID(),
+        ts: Date.now(),
         workspaceId: instance.workspaceId,
         reason: 'waiting_input',
+        source: 'pty',
       })
     }
   }

@@ -163,6 +163,16 @@ const api = {
       ipcRenderer.send(IPC.APP_WINDOW_CLOSE),
     isWindowMaximized: () =>
       ipcRenderer.invoke(IPC.APP_WINDOW_IS_MAXIMIZED) as Promise<boolean>,
+    openInVSCode: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.APP_OPEN_IN_VSCODE, dirPath) as Promise<{
+        ok: boolean
+        error?: string
+      }>,
+    openInCursor: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.APP_OPEN_IN_CURSOR, dirPath) as Promise<{
+        ok: boolean
+        error?: string
+      }>,
     onOpenDirectory: (callback: (dirPath: string) => void) => {
       openDirectoryListeners.add(callback)
       while (pendingDirectoryPaths.length > 0) {
